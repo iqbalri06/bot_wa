@@ -1,5 +1,7 @@
 const config = require('../config/config');
 
+
+
 const responses = {
     // Pesan Pembuka
     'hi': '👋 Halo! Selamat datang di Wikfess Bot!\n\nSaya adalah bot yang akan membantu kamu mengirim pesan secara anonim. Ketik "menu" untuk melihat daftar perintah.',
@@ -19,10 +21,13 @@ const responses = {
 
 3️⃣ *Info Bot*
    About this bot
+   
+4️⃣ *Game Menu*
+   Play fun games
 
 ┗━━━━━━━━━━━━━━━┛
 
-_Ketik nomor (1-3) untuk memilih_`,
+_Ketik nomor (1-4) untuk memilih_`,
 
     '1': `┏━━━『 📨 PESAN ANONIM 』━━━┓
 
@@ -95,6 +100,21 @@ python run.py
 
 📢 _Bot ini dibuat untuk memudahkan komunikasi anonim dengan aman dan nyaman_
 ━━━━━━━━━━━━━━━━`,
+
+    '4': `╔═══《 🎮 *GAME MENU* 🎮 》═══╗
+
+📌 *List Game:*
+
+1️⃣ *Suit (RPS)*
+   • Ketik: !suit
+   • Main suit kertas gunting batu
+   • Kumpulkan skor tertinggi!
+
+2️⃣ *Coming Soon...*
+
+╚════《 ✨ *Have Fun!* ✨ 》════╝
+
+_Ketik sesuai perintah untuk bermain_`,
 
     // Status dan Respon
     'ping': '🏓 Pong!\nStatus: Online\n',

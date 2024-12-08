@@ -1,5 +1,6 @@
 const { responses } = require('../commands/textResponses');
 const config = require('../config/config');
+const { handleRPSGame } = require('../games/rpsGame');
 
 // Simpan data chat untuk melacak pengirim asli
 const chatData = new Map();
@@ -76,6 +77,18 @@ _↪️ Gunakan fitur Balas untuk mengirim pesan_
                 }
                 return;
             }
+        }
+
+        // Add to command handler
+        if (text.startsWith('!suit') || text === '!rps') {
+            await handleRPSGame(sock, senderId, text);
+            return;
+        }
+
+        // In your message handler
+        if (text === '!suit' || ['batu', 'gunting', 'kertas'].includes(text.toLowerCase().trim())) {
+            await handleRPSGame(sock, senderId, text);
+            return;
         }
 
         // Handle balasan pesan

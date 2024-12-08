@@ -14,6 +14,14 @@ module.exports = {
     commands: {
         start: ['hi', 'hello', 'start'],
         public: ['menu', 'help', 'about', 'ping'],
-        admin: ['broadcast', 'stats']
+        admin: ['broadcast', 'stats'],
+        game: {
+            aliases: ['game', 'games'],
+            description: 'Menampilkan menu game'
+        },
+        suit: {
+            aliases: ['suit', 'rps'],
+            description: 'Main suit kertas gunting batu'
+        }
     }
 };

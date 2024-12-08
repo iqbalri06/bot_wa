@@ -1,4 +1,4 @@
-const { default: makeWASocket, DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/baileys');
+const {  makeWASocket, DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/baileys');
 const { handleMessage } = require('../handlers/messageHandler');
 const { responses } = require('../commands/textResponses');
 const config = require('../config/config');
@@ -7,6 +7,9 @@ async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState(config.session.path);
     
     const sock = makeWASocket({
+        syncFullHistory: false,
+        markOnlineOnConnect: false,
+        retryRequestDelayMs: 2000,
         printQRInTerminal: true,
         auth: state,
         browser: [config.botInfo.name, 'Chrome', config.botInfo.version]
