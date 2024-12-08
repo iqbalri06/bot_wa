@@ -1,0 +1,13 @@
+{
+  "name": "bot-wa_wikfess",
+  "version": "1.0.0",
+  "description": "WhatsApp Bot using Baileys",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9"
+  }
+}
