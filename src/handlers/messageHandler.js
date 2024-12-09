@@ -1,9 +1,12 @@
 const { responses } = require('../commands/textResponses');
 const config = require('../config/config');
 const { handleRPSGame } = require('../games/rpsGame');
+const { handleTiktokCommand } = require('../handlers/tiktokHandler');
+const { handleInstagramCommand} = require('../handlers/instagramHandler');
 
 // Simpan data chat untuk melacak pengirim asli
 const chatData = new Map();
+
 
 async function handleMessage(sock, message) {
     const content = message.message;
@@ -79,9 +82,21 @@ _↪️ Gunakan fitur Balas untuk mengirim pesan_
             }
         }
 
+        if (text.startsWith('!ig ')) {
+            const url = text.slice(4).trim();
+            await handleInstagramCommand(sock, senderId, url);
+            return;
+        }
+
         // Add to command handler
         if (text.startsWith('!suit') || text === '!rps') {
             await handleRPSGame(sock, senderId, text);
+            return;
+        }
+
+        if (text.startsWith('!tt ')) {
+            const url = text.slice(4).trim();
+            await handleTiktokCommand(sock, senderId, url);
             return;
         }
 
