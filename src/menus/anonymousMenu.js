@@ -22,4 +22,4 @@ const anonymousMenu = {
     }
 };
 
-export default anonymousMenu;
+module.exports = anonymousMenu;
