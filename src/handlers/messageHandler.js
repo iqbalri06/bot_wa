@@ -50,13 +50,19 @@ async function handleMessage(sock, message) {
 ${messageText}
 ❞
 
-┌──「 ℹ️ Panduan 」──
-• *Reply* pesan ini
-• Ketik balasan Anda
-• Kirim seperti biasa
+┌──「 ℹ️ Panduan Membalas 」──
+1️⃣ Tekan dan tahan pesan ini
+2️⃣ Pilih 'Reply/Balas'
+3️⃣ Tulis balasan Anda
+4️⃣ Tekan tombol kirim
 
-_↪️ Gunakan fitur Balas untuk mengirim pesan_
+⚠️ *Pesan ini hanya dapat dibalas satu kali*
+_↪️ Balas pesan ini untuk mengirim balasan_
 └───────────────────────┘`;
+const botInfo = `\n📱 _Pesan ini dikirim melalui BOT_
+💡 *Tips*: Reply pesan ini dan ketik balasan Anda untuk mengirim pesan kembali`;
+
+formattedMessage += botInfo;
 
                 try {
                     // Kirim pesan ke penerima
