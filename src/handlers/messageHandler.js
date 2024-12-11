@@ -67,13 +67,18 @@ async function handleSendCommand(sock, senderId, text) {
 
     const formattedNumber = `${number.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
     const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false });
-    const formattedMessage = formatNewMessage(timestamp, messageText);
 
     try {
-        const sent = await sock.sendMessage(formattedNumber, { text: formattedMessage });
+        // Kirim pesan dengan banner
+        const sent = await sock.sendMessage(formattedNumber, {
+            image: { url: './asset/img/banner_pesan.png' },
+            caption: formatNewMessage(timestamp, messageText)
+        });
+        
         chatData.set(sent.key.id, { sender: senderId, receiver: formattedNumber });
         await sock.sendMessage(senderId, { text: responses.send_success });
     } catch (err) {
+        console.error('Error sending message:', err);
         await sock.sendMessage(senderId, { text: responses.send_failed });
     }
 }
@@ -82,7 +87,6 @@ async function handleReply(sock, message, senderId) {
     const content = message.message;
     const messageType = Object.keys(content)[0];
     
-    // Get quoted message ID based on message type
     let quotedMessageId;
     if (messageType === 'extendedTextMessage') {
         quotedMessageId = content.extendedTextMessage.contextInfo.stanzaId;
@@ -121,11 +125,9 @@ async function handleReply(sock, message, senderId) {
 }
 
 async function sendMediaReply(sock, targetId, messageType, mediaData, content, timestamp) {
-    // Template dasar untuk balasan
     const replyTemplate = `┌─────「 ✉️ *BALASAN* 」─────┐\n\n` +
                          `⏱️ *Waktu* : ${timestamp}\n\n`;
 
-    // Template untuk panduan balasan
     const guideTemplate = `\n┌──「 ℹ️ Panduan Balasan 」──\n` +
                          `• Reply pesan ini untuk membalas\n` +
                          `• Ketik pesan atau kirim media\n` +
@@ -136,12 +138,10 @@ async function sendMediaReply(sock, targetId, messageType, mediaData, content, t
         
         switch(messageType) {
             case 'stickerMessage':
-                // Kirim stiker terlebih dahulu
                 sent = await sock.sendMessage(targetId, {
                     sticker: mediaData
                 });
                 
-                // Kirim pesan informasi setelah stiker
                 await sock.sendMessage(targetId, {
                     text: replyTemplate + 
                          `✨ _Stiker Balasan telah dikirim_\n` +
@@ -150,14 +150,12 @@ async function sendMediaReply(sock, targetId, messageType, mediaData, content, t
                 break;
                 
             case 'audioMessage':
-                // Kirim audio
                 sent = await sock.sendMessage(targetId, {
                     audio: mediaData,
                     mimetype: 'audio/mp4',
                     ptt: content.audioMessage?.ptt || false
                 });
                 
-                // Kirim informasi audio
                 await sock.sendMessage(targetId, {
                     text: replyTemplate + 
                          `✨ _Audio Balasan telah dikirim_\n` +
@@ -202,7 +200,7 @@ async function sendMediaReply(sock, targetId, messageType, mediaData, content, t
 }
 
 function formatNewMessage(timestamp, messageText) {
-    return `┌─────「 📨 *PESAN BARU* 」────┐\n\n` +
+    return `┌───「 📨 *PESAN BARU* 」──┐\n\n` +
            `⏱️ *Waktu* : ${timestamp}\n` +
            `👤 *Dari* : Anonim\n\n` +
            `┌──「 💭 Pesan 」──\n❝\n${messageText}\n❞\n\n` +
@@ -211,7 +209,7 @@ function formatNewMessage(timestamp, messageText) {
            `• Ketik balasan/kirim media\n` +
            `• Kirim seperti biasa\n\n` +
            `_↪️ Gunakan fitur Balas untuk mengirim pesan_\n` +
-           `└───────────────────────┘`;
+           `└─────────────────────┘`;
 }
 
 function formatReplyMessage(timestamp, text) {
