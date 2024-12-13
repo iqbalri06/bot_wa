@@ -16,7 +16,7 @@ const aboutMenu = `
 ║  ✧ Developer : ${config.botInfo.author}
 ║
 ║  ◈━━━━━━━━━━━━━━◈
-║  📱 *KONTAK ADMIN*
+║  📱 *KONTAK DEVELOPER*
 ║  ◈━━━━━━━━━━━━━━◈
 ${config.owner.map(owner => `║  ❯ wa.me/${formatPhoneNumber(owner)}`).join('\n')}
 ║

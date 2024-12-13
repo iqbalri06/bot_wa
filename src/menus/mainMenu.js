@@ -15,12 +15,15 @@ const mainMenu = `
 ┃
 ┃ [3] Fun Games             
 ┃
-┃ [4] TikTok Downloader     
+┃ [4] TikTok Downloader  
 ┃
 ┃ [5] Instagram Downloader   
+┃    ⚠️ Sedang Diperbaiki!     
+┃
+┃ [6] Create Sticker        
 ┃                              
 ┗━━━━━━━━━━━━━━━━━━━┛
 
-Reply with number (1-5) to select`;
+Reply with number (1-6) to select`;
 
 module.exports = mainMenu;

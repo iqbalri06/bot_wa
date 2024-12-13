@@ -1,5 +1,5 @@
 // handlers/instagramHandler.js
-const { igdl } = require('btch-downloader');
+const { igdl } = require('btch-downloader')
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000;

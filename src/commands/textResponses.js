@@ -16,6 +16,7 @@ const responses = {
     '3': menus.game,
     '4': menus.tiktok,
     '5': menus.instagram,
+    '6': menus.stiker,
 
     // Error responses
     'invalid_format': '❌ Format pesan tidak valid!\n\nGunakan format:\n!kirim <nomor> <pesan>',

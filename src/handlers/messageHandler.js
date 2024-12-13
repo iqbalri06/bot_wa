@@ -1,35 +1,46 @@
 const { responses } = require('../commands/textResponses');
 const config = require('../config/config');
 const { handleRPSGame } = require('../games/rpsGame');
-const { handleTiktokCommand } = require('../handlers/tiktokHandler');
-const { handleInstagramCommand} = require('../handlers/instagramHandler');
+const { handleTiktokCommand } = require('./tiktokHandler');
+const { handleInstagramCommand } = require('./instagramHandler');
+const { handleSticker } = require('./stikerHandler');
 const { downloadMediaMessage } = require('@whiskeysockets/baileys');
 const fs = require('fs');
 
 // Store chat data to track original senders
 const chatData = new Map();
 
+// Helper function to get message content
+const getMessageContent = (message) => {
+    const messageType = Object.keys(message.message || {})[0];
+    let content = '';
+
+    if (messageType === 'imageMessage') {
+        content = message.message.imageMessage.caption || '';
+    } else if (messageType === 'conversation') {
+        content = message.message.conversation || '';
+    } else if (messageType === 'extendedTextMessage') {
+        content = message.message.extendedTextMessage.text || '';
+    }
+
+    return { messageType, content };
+};
+
+// Main message handler
 async function handleMessage(sock, message) {
     const content = message.message;
-    const messageType = Object.keys(content)[0];
+    if (!content) return;
+
+    const { messageType, content: extractedContent } = getMessageContent(message);
     const senderId = message.key.remoteJid;
-    
-    // Extract text content
-    let text = '';
-    if (messageType === 'conversation') {
-        text = content.conversation;
-    } else if (messageType === 'extendedTextMessage') {
-        text = content.extendedTextMessage.text;
-    } else if (messageType === 'imageMessage') {
-        text = content.imageMessage.caption || '';
-    }
+    const text = extractedContent;
 
     // Handle commands
     if (text.startsWith('!ig ')) {
         await handleInstagramCommand(sock, senderId, text.slice(4).trim());
         return;
     }
-
+    
     if (text.startsWith('!tt ')) {
         await handleTiktokCommand(sock, senderId, text.slice(4).trim());
         return;
@@ -37,6 +48,17 @@ async function handleMessage(sock, message) {
 
     if (text.startsWith('!suit') || text === '!rps' || ['batu', 'gunting', 'kertas'].includes(text.toLowerCase().trim())) {
         await handleRPSGame(sock, senderId, text);
+        return;
+    }
+
+    // Handle sticker command
+    const isStickerCommand = text.toLowerCase().trim() === '!sticker';
+    const hasImage = messageType === 'imageMessage' || 
+                    (messageType === 'extendedTextMessage' && 
+                     message.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage);
+
+    if (isStickerCommand && hasImage) {
+        await handleSticker(sock, message, senderId);
         return;
     }
 
@@ -129,7 +151,7 @@ async function sendMediaReply(sock, targetId, messageType, mediaData, content, t
                          `⏱️ *Waktu* : ${timestamp}\n\n`;
 
     const guideTemplate = `\n┌──「 ℹ️ Panduan Balasan 」──\n` +
-                         `• Reply pesan ini untuk membalas\n` +
+                         `• Reply Stiker/Audio untuk membalas\n` +
                          `• Ketik pesan atau kirim media\n` +
                          `└─────────────────────┘`;
 

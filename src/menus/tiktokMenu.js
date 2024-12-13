@@ -1,24 +1,20 @@
-const tiktokMenu = `╔══════《 🎵 UNDUH TIKTOK 》══════╗
+const tiktokMenu = `┌─────「 🎵 TIKTOK 」─────┐
 
-📱 *CARA PENGGUNAAN*
-────────────────────
-➤ Ketik: !tt <url>
-➤ Contoh: !tt https://vm.tiktok.com/xxxxx
-➤ Contoh: !tt https://vt.tiktok.com/xxxxx
+📝 *Cara Menggunakan*
+• Ketik: !tt <url>
+• Contoh: !tt vm.tiktok.com/xxx
+• Contoh: !tt vt.tiktok.com/xxx
 
-✨ *FITUR TERSEDIA*
-────────────────────
-✓ Video TikTok tanpa watermark
-✓ Info statistik video
-✓ Keterangan video
+✨ *Fitur Support*
+• Video tanpa watermark 🎬
+• Info statistik 📊
+• Caption video 📝
 
-⚠️ *CATATAN PENTING*
-────────────────────
-• Pastikan URL dapat diakses & tidak privat
-• Mohon tunggu proses unduhan
-• Maksimal durasi 10 menit
+⚠️ *Catatan*
+• Max durasi: 10 menit
+• URL harus dapat diakses
 
-_Silakan kirim URL TikTok yang ingin diunduh_
-╚═══════════════════════════╝`;
+_Kirim URL TikTok untuk mengunduh_
+└──────────────────────┘`;
 
 module.exports = tiktokMenu;

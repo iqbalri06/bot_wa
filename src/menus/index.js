@@ -6,5 +6,6 @@ module.exports = {
     about: require('./aboutMenu'),
     game: require('./gameMenu'),
     tiktok: require('./tiktokMenu'),
-    instagram: require('./instagramMenu')
+    instagram: require('./instagramMenu'),
+    stiker: require('./stikerMenu')
 };
