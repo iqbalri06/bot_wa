@@ -8,6 +8,7 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
+    "@adiwajshing/baileys": "^5.0.0",
     "@tobyg74/tiktok-api-dl": "^1.2.2",
     "@whiskeysockets/baileys": "^6.7.9",
     "axios": "^1.7.9",
