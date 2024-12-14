@@ -17,8 +17,7 @@ const mainMenu = `
 ┃
 ┃ [4] TikTok Downloader  
 ┃
-┃ [5] Instagram Downloader   
-┃   ⚠️ Sedang Diperbaiki!     
+┃ [5] Instagram Downloader    
 ┃
 ┃ [6] Create Sticker        
 ┃                              
