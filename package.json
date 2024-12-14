@@ -8,6 +8,7 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
     "@tobyg74/tiktok-api-dl": "^1.2.2",
     "@whiskeysockets/baileys": "^6.7.9",
     "async-mutex": "^0.5.0",
@@ -20,6 +21,7 @@
     "html-entities": "^2.5.2",
     "node-fetch": "^3.3.2",
     "node-html-parser": "^6.1.13",
+    "openai": "^4.76.3",
     "priyansh-ig-downloader": "^2.0.4",
     "qs": "^6.13.1",
     "rahad-media-downloader": "^2.1.14",

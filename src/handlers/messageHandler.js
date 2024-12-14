@@ -6,6 +6,7 @@ const { handleInstagramCommand } = require('./instagramHandler');
 const { handleSticker } = require('./stikerHandler');
 const { downloadMediaMessage } = require('@whiskeysockets/baileys');
 const fs = require('fs');
+const { handleAIQuery } = require('./aiHandler');
 
 // Store chat data to track original senders
 const chatData = new Map();
@@ -34,6 +35,14 @@ async function handleMessage(sock, message) {
     const { messageType, content: extractedContent } = getMessageContent(message);
     const senderId = message.key.remoteJid;
     const text = extractedContent;
+    
+
+    // AI Command handler
+    if (text.startsWith('!ai ')) {
+        await handleAIQuery(sock, senderId, text.slice(4).trim());
+        return;
+    }
+    
 
     // Handle commands
     if (text.startsWith('!ig ')) {

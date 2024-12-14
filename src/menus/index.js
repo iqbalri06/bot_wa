@@ -7,5 +7,6 @@ module.exports = {
     game: require('./gameMenu'),
     tiktok: require('./tiktokMenu'),
     instagram: require('./instagramMenu'),
-    stiker: require('./stikerMenu')
+    stiker: require('./stikerMenu'),
+    ai: require('./aiMenu')
 };

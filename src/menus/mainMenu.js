@@ -9,20 +9,23 @@ const mainMenu = `
 
 ┏━━━━『 MAIN MENU 』━━━━┓
 ┃                              
-┃ [1] Anonymous Message       
+┃ [1] 🤖 AI Assistant
+┃     • Chat with AI 
 ┃
-┃ [2] Bot Information        
+┃ [2] Anonymous Message       
 ┃
-┃ [3] Fun Games             
+┃ [3] Bot Information        
 ┃
-┃ [4] TikTok Downloader  
+┃ [4] Fun Games             
 ┃
-┃ [5] Instagram Downloader    
+┃ [5] TikTok Downloader  
 ┃
-┃ [6] Create Sticker        
+┃ [6] Instagram Downloader    
+┃
+┃ [7] Create Sticker        
 ┃                              
 ┗━━━━━━━━━━━━━━━━━━━┛
 
-Reply with number (1-6) to select`;
+Reply with number (1-7) to select`;
 
 module.exports = mainMenu;

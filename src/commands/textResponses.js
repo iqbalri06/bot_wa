@@ -11,12 +11,13 @@ const responses = {
     'menu': menus.main,
 
     // Numbered menus
-    '1': menus.anonymous,
-    '2': menus.about,
-    '3': menus.game,
-    '4': menus.tiktok,
-    '5': menus.instagram,
-    '6': menus.stiker,
+    '1': menus.ai,
+    '2': menus.anonymous,
+    '3': menus.about,
+    '4': menus.game,
+    '5': menus.tiktok,
+    '6': menus.instagram,
+    '7': menus.stiker,
 
     // Error responses
     'invalid_format': '❌ Format pesan tidak valid!\n\nGunakan format:\n!kirim <nomor> <pesan>',
