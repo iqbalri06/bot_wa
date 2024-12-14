@@ -1,9 +1,9 @@
 module.exports = {
-    botName: 'Iqbot Prime',
+    botName: 'TechBalion',
     owner: ['6281291544061@s.whatsapp.net'],
     prefix: '!',
     botInfo: {
-        name: 'Iqbot Prime',
+        name: 'TechBalion',
         version: '1.0.0',
         author: 'Iqbal Roudatul',
         description: 'Bot WhatsApp serba guna.'
