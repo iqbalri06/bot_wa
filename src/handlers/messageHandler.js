@@ -1,254 +1,51 @@
-const { responses } = require('../commands/textResponses');
-const config = require('../config/config');
-const { handleRPSGame } = require('../games/rpsGame');
-const { handleTiktokCommand } = require('./tiktokHandler');
-const { handleInstagramCommand } = require('./instagramHandler');
-const { handleSticker } = require('./stikerHandler');
-const { downloadMediaMessage } = require('@whiskeysockets/baileys');
-const fs = require('fs');
-const { handleAIQuery } = require('./aiHandler');
+const CommandHandler = require('../commands/CommandHandler');
+const MessageService = require('../services/MessageService');
+const { getMessageContent } = require('../utils/messageUtils');
+const { handleError } = require('../utils/errorHandler');
 
-// Store chat data to track original senders
-const chatData = new Map();
-
-// Helper function to get message content
-const getMessageContent = (message) => {
-    const messageType = Object.keys(message.message || {})[0];
-    let content = '';
-
-    if (messageType === 'imageMessage') {
-        content = message.message.imageMessage.caption || '';
-    } else if (messageType === 'conversation') {
-        content = message.message.conversation || '';
-    } else if (messageType === 'extendedTextMessage') {
-        content = message.message.extendedTextMessage.text || '';
+class MessageHandler {
+    constructor() {
+        this.commandHandler = new CommandHandler();
+        this.messageService = new MessageService();
+        this.responseTimeout = new Map();
+        this.TIMEOUT_PERIOD = 5000;
     }
 
-    return { messageType, content };
-};
+    async handle(sock, message) {
+        try {
+            const { messageType, content: text } = getMessageContent(message);
+            const senderId = message.key.remoteJid;
 
-// Main message handler
-async function handleMessage(sock, message) {
-    const content = message.message;
-    if (!content) return;
+            if (!text || !this.checkRateLimit(senderId)) return;
 
-    const { messageType, content: extractedContent } = getMessageContent(message);
-    const senderId = message.key.remoteJid;
-    const text = extractedContent;
-    
+            const lowercaseText = text.toLowerCase().trim();
+            
+            // Handle commands
+            if (lowercaseText.startsWith('!')) {
+                await this.commandHandler.executeCommand(sock, senderId, messageType, text, message);
+                return;
+            }
 
-    // AI Command handler
-    if (text.startsWith('!ai ')) {
-        await handleAIQuery(sock, senderId, text.slice(4).trim());
-        return;
-    }
-    
+            // Handle non-command messages
+            await this.messageService.processMessage(sock, senderId, messageType, text, message);
 
-    // Handle commands
-    if (text.startsWith('!ig ')) {
-        await handleInstagramCommand(sock, senderId, text.slice(4).trim());
-        return;
-    }
-    
-    if (text.startsWith('!tt ')) {
-        await handleTiktokCommand(sock, senderId, text.slice(4).trim());
-        return;
-    }
-
-    if (text.startsWith('!suit') || text === '!rps' || ['batu', 'gunting', 'kertas'].includes(text.toLowerCase().trim())) {
-        await handleRPSGame(sock, senderId, text);
-        return;
-    }
-
-    // Handle sticker command
-    const isStickerCommand = text.toLowerCase().trim() === '!sticker';
-    const hasImage = messageType === 'imageMessage' || 
-                    (messageType === 'extendedTextMessage' && 
-                     message.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage);
-
-    if (isStickerCommand && hasImage) {
-        await handleSticker(sock, message, senderId);
-        return;
-    }
-
-    // Handle send command
-    if (text.startsWith(config.prefix + 'kirim')) {
-        await handleSendCommand(sock, senderId, text);
-        return;
-    }
-
-    // Handle replies
-    if (message.message?.extendedTextMessage?.contextInfo?.stanzaId || 
-        message.message?.imageMessage?.contextInfo?.stanzaId ||
-        message.message?.audioMessage?.contextInfo?.stanzaId ||
-        message.message?.videoMessage?.contextInfo?.stanzaId ||
-        message.message?.stickerMessage?.contextInfo?.stanzaId) {
-        await handleReply(sock, message, senderId);
-    }
-}
-
-async function handleSendCommand(sock, senderId, text) {
-    const [cmd, number, ...args] = text.slice(config.prefix.length).trim().split(' ');
-    const messageText = args.join(' ');
-
-    if (!number || !messageText) {
-        await sock.sendMessage(senderId, { text: responses.invalid_format });
-        return;
-    }
-
-    const formattedNumber = `${number.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
-    const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false });
-
-    try {
-        // Kirim pesan dengan banner
-        const sent = await sock.sendMessage(formattedNumber, {
-            image: { url: './asset/img/banner_pesan.png' },
-            caption: formatNewMessage(timestamp, messageText)
-        });
-        
-        chatData.set(sent.key.id, { sender: senderId, receiver: formattedNumber });
-        await sock.sendMessage(senderId, { text: responses.send_success });
-    } catch (err) {
-        console.error('Error sending message:', err);
-        await sock.sendMessage(senderId, { text: responses.send_failed });
-    }
-}
-
-async function handleReply(sock, message, senderId) {
-    const content = message.message;
-    const messageType = Object.keys(content)[0];
-    
-    let quotedMessageId;
-    if (messageType === 'extendedTextMessage') {
-        quotedMessageId = content.extendedTextMessage.contextInfo.stanzaId;
-    } else if (['imageMessage', 'audioMessage', 'videoMessage', 'stickerMessage'].includes(messageType)) {
-        quotedMessageId = content[messageType].contextInfo.stanzaId;
-    }
-
-    const chatInfo = chatData.get(quotedMessageId);
-    if (!chatInfo) return;
-
-    const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false });
-    const targetId = senderId === chatInfo.sender ? chatInfo.receiver : chatInfo.sender;
-
-    try {
-        let sent;
-
-        if (['imageMessage', 'audioMessage', 'videoMessage', 'stickerMessage'].includes(messageType)) {
-            const mediaData = await downloadMediaMessage(message, 'buffer');
-            sent = await sendMediaReply(sock, targetId, messageType, mediaData, content, timestamp);
-        } else {
-            const text = content.extendedTextMessage.text;
-            sent = await sock.sendMessage(targetId, {
-                text: formatReplyMessage(timestamp, text)
-            });
+        } catch (error) {
+            await handleError(sock, message.key.remoteJid, error);
         }
-
-        chatData.set(sent.key.id, { sender: senderId, receiver: targetId });
-        await sock.sendMessage(senderId, { 
-            text: '✅ *Pesan berhasil diteruskan*\n\n_Terimakasih telah menggunakan bot ini_' 
-        });
-
-    } catch (err) {
-        console.error('Error handling reply:', err);
-        await sock.sendMessage(senderId, { text: responses.reply_failed });
     }
-}
 
-async function sendMediaReply(sock, targetId, messageType, mediaData, content, timestamp) {
-    const replyTemplate = `┌─────「 ✉️ *BALASAN* 」─────┐\n\n` +
-                         `⏱️ *Waktu* : ${timestamp}\n\n`;
-
-    const guideTemplate = `\n┌──「 ℹ️ Panduan Balasan 」──\n` +
-                         `• Reply Stiker/Audio untuk membalas\n` +
-                         `• Ketik pesan atau kirim media\n` +
-                         `└─────────────────────┘`;
-
-    try {
-        let sent;
-        
-        switch(messageType) {
-            case 'stickerMessage':
-                sent = await sock.sendMessage(targetId, {
-                    sticker: mediaData
-                });
-                
-                await sock.sendMessage(targetId, {
-                    text: replyTemplate + 
-                         `✨ _Stiker Balasan telah dikirim_\n` +
-                         guideTemplate
-                });
-                break;
-                
-            case 'audioMessage':
-                sent = await sock.sendMessage(targetId, {
-                    audio: mediaData,
-                    mimetype: 'audio/mp4',
-                    ptt: content.audioMessage?.ptt || false
-                });
-                
-                await sock.sendMessage(targetId, {
-                    text: replyTemplate + 
-                         `✨ _Audio Balasan telah dikirim_\n` +
-                         `⏱️ Durasi: ${content.audioMessage?.seconds || 0} detik\n` +
-                         guideTemplate
-                });
-                break;
-                
-            case 'imageMessage':
-                sent = await sock.sendMessage(targetId, {
-                    image: mediaData,
-                    caption: replyTemplate + 
-                            `┌──「 💬 Pesan 」──\n` +
-                            `❝\n${content.imageMessage?.caption || ''}\n❞\n\n` +
-                            `✨ _Foto Balasan_\n` +
-                            guideTemplate
-                });
-                break;
-                
-            case 'videoMessage':
-                sent = await sock.sendMessage(targetId, {
-                    video: mediaData,
-                    caption: replyTemplate + 
-                            `┌──「 💬 Pesan 」──\n` +
-                            `❝\n${content.videoMessage?.caption || ''}\n❞\n\n` +
-                            `✨ _Video Balasan_\n` +
-                            guideTemplate,
-                    gifPlayback: content.videoMessage?.gifPlayback || false
-                });
-                break;
-                
-            default:
-                throw new Error('Tipe media tidak didukung');
+    checkRateLimit(senderId) {
+        const now = Date.now();
+        if (now - (this.responseTimeout.get(senderId) || 0) < this.TIMEOUT_PERIOD) {
+            return false;
         }
-
-        return sent;
-
-    } catch (error) {
-        console.error('Error sending media reply:', error);
-        throw error;
+        this.responseTimeout.set(senderId, now);
+        return true;
     }
 }
 
-function formatNewMessage(timestamp, messageText) {
-    return `┌───「 📨 *PESAN BARU* 」──┐\n\n` +
-           `⏱️ *Waktu* : ${timestamp}\n` +
-           `👤 *Dari* : Anonim\n\n` +
-           `┌──「 💭 Pesan 」──\n❝\n${messageText}\n❞\n\n` +
-           `┌──「 ℹ️ Panduan 」──\n` +
-           `• *Reply* pesan ini\n` +
-           `• Ketik balasan/kirim media\n` +
-           `• Kirim seperti biasa\n\n` +
-           `_↪️ Gunakan fitur Balas untuk mengirim pesan_\n` +
-           `└─────────────────────┘`;
-}
-
-function formatReplyMessage(timestamp, text) {
-    return `┌─────「 ✉️ *BALASAN* 」─────┐\n\n` +
-           `⏱️ *Waktu* : ${timestamp}\n\n` +
-           `┌──「 💬 Pesan 」──\n❝\n${text}\n❞\n\n` +
-           `✨ _Pesan Balasan_\n` +
-           `└─────────────────────┘`;
-}
+// Instead of exporting the instance, export the handle method directly
+const messageHandler = new MessageHandler();
+const handleMessage = messageHandler.handle.bind(messageHandler);
 
 module.exports = { handleMessage };

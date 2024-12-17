@@ -30,30 +30,8 @@ async function connectToWhatsApp() {
     
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const message = messages[0];
-        if (!message.message) return;
-
-        const content = message.message;
-        const messageType = Object.keys(content)[0];
-        const senderId = message.key.remoteJid;
-
-        // Handle text messages
-        if (messageType === 'conversation' || messageType === 'extendedTextMessage') {
-            const text = messageType === 'conversation' ? 
-                content.conversation : 
-                content.extendedTextMessage.text;
-
-            const cmd = text.toLowerCase();
-
-            // Check if command exists in responses
-            if (responses[cmd]) {
-                await sock.sendMessage(senderId, {
-                    text: responses[cmd]
-                });
-                return;
-            }
-        }
-
-        // Handle other message types
+        if (message.key.fromMe) return;
+    
         await handleMessage(sock, message);
     });
 }
