@@ -1,7 +1,9 @@
 const config = require('../config/config');
 
-const mainMenu = `
-╭━━━━「 *${config.botName}* 」━━━━╮
+async function getMainMenu() {
+    try {
+        return {
+            text: `╭━━━━「 *${config.botName}* 」━━━━╮
 ┃                              
 ┃     WELCOME TO BOT MENU      
 ┃                              
@@ -10,7 +12,6 @@ const mainMenu = `
 ┏━━━━『 MAIN MENU 』━━━━┓
 ┃                              
 ┃ [1] 🤖 AI Assistant
-┃     • Chat with AI 
 ┃
 ┃ [2] Anonymous Message       
 ┃
@@ -26,6 +27,12 @@ const mainMenu = `
 ┃                              
 ┗━━━━━━━━━━━━━━━━━━━┛
 
-Reply with number (1-7) to select`;
+Reply with number (1-7) to select`
+        };
+    } catch (error) {
+        console.error('Error generating main menu:', error);
+        return { text: '❌ Terjadi kesalahan dalam menampilkan menu' };
+    }
+}
 
-module.exports = mainMenu;
+module.exports = { getMainMenu };

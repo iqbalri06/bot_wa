@@ -18,28 +18,57 @@ async function handleReply(sock, message, senderId) {
 
     const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false });
     const targetId = senderId === chatInfo.sender ? chatInfo.receiver : chatInfo.sender;
+    const originalMessage = chatInfo.message; // Get the original message text
 
     try {
         let sent;
+        let messageContent = '';
 
-        if (['imageMessage', 'audioMessage', 'videoMessage', 'stickerMessage'].includes(messageType)) {
+        if (['stickerMessage', 'audioMessage'].includes(messageType)) {
             const mediaData = await downloadMediaMessage(message, 'buffer');
-            sent = await sendMediaReply(sock, targetId, messageType, mediaData, content, timestamp);
-        } else {
-            const text = content.extendedTextMessage.text;
+            
+            // 1. Forward the media first
             sent = await sock.sendMessage(targetId, {
-                text: formatReplyMessage(timestamp, text)
+                [messageType === 'stickerMessage' ? 'sticker' : 'audio']: mediaData,
+                ...(messageType === 'audioMessage' && {
+                    mimetype: 'audio/mp4',
+                    ptt: content.audioMessage?.ptt || false
+                })
+            });
+
+            // 2. Send context message separately
+            const infoText = `┌─────「 ✉️ *BALASAN* 」─────┐\n\n` +
+                           `⏱️ *Waktu* : ${timestamp}\n\n` +
+                           `💬 *Pesan yang dibalas*:\n❝\n${originalMessage}\n❞\n\n` +
+                           `✨ _Membalas dengan ${messageType === 'stickerMessage' ? 'Stiker' : 'Audio'}_` +
+                           (messageType === 'audioMessage' && content.audioMessage?.seconds ? 
+                           `\n⏱️ Durasi: ${content.audioMessage.seconds} detik` : '');
+
+            await sock.sendMessage(targetId, { text: infoText });
+            
+            messageContent = messageType === 'stickerMessage' ? '[Sticker Reply]' : '[Audio Reply]';
+
+        } else if (['imageMessage', 'videoMessage'].includes(messageType)) {
+            const mediaData = await downloadMediaMessage(message, 'buffer');
+            messageContent = content[messageType]?.caption || `[${messageType.replace('Message', '')} Reply]`;
+            sent = await sendMediaReply(sock, targetId, messageType, mediaData, content, timestamp, originalMessage);
+        } else {
+            messageContent = content.extendedTextMessage.text;
+            sent = await sock.sendMessage(targetId, {
+                text: formatReplyMessage(timestamp, messageContent, originalMessage)
             });
         }
 
-        // Store new chat data with swapped sender/receiver for future replies
-        chatData.set(sent.key.id, {
-            sender: senderId,
-            receiver: targetId,
-            message: content.extendedTextMessage?.text || '',
-            timestamp: timestamp,
-            originalMessageId: quotedMessageId // Track original message
-        });
+        // Store chat data
+        if (sent?.key?.id) {
+            chatData.set(sent.key.id, {
+                sender: senderId,
+                receiver: targetId,
+                message: messageContent,
+                timestamp: timestamp,
+                originalMessageId: quotedMessageId
+            });
+        }
 
         // Confirm message sent
         await sock.sendMessage(senderId, { 
@@ -52,75 +81,24 @@ async function handleReply(sock, message, senderId) {
     }
 }
 
-async function sendMediaReply(sock, targetId, messageType, mediaData, content, timestamp) {
+// Simplify sendMediaReply since we're handling media directly in handleReply
+async function sendMediaReply(sock, targetId, messageType, mediaData, content, timestamp, originalMessage) {
+    // Only used for image and video captions now
     const replyTemplate = `┌─────「 ✉️ *BALASAN* 」─────┐\n\n` +
-                         `⏱️ *Waktu* : ${timestamp}\n\n`;
-
-    const guideTemplate = `\n┌──「 ℹ️ Panduan Balasan 」──\n` +
-                         `• Reply Stiker/Audio untuk membalas\n` +
-                         `• Ketik pesan atau kirim media\n` +
-                         `└─────────────────────┘`;
+                         `⏱️ *Waktu* : ${timestamp}\n\n` +
+                         `💬 *Pesan yang dibalas*:\n❝\n${originalMessage}\n❞\n\n`;
 
     try {
-        let sent;
-        
-        switch(messageType) {
-            case 'stickerMessage':
-                sent = await sock.sendMessage(targetId, {
-                    sticker: mediaData
-                });
-                
-                await sock.sendMessage(targetId, {
-                    text: replyTemplate + 
-                         `✨ _Stiker Balasan telah dikirim_\n` +
-                         guideTemplate
-                });
-                break;
-                
-            case 'audioMessage':
-                sent = await sock.sendMessage(targetId, {
-                    audio: mediaData,
-                    mimetype: 'audio/mp4',
-                    ptt: content.audioMessage?.ptt || false
-                });
-                
-                await sock.sendMessage(targetId, {
-                    text: replyTemplate + 
-                         `✨ _Audio Balasan telah dikirim_\n` +
-                         `⏱️ Durasi: ${content.audioMessage?.seconds || 0} detik\n` +
-                         guideTemplate
-                });
-                break;
-                
-            case 'imageMessage':
-                sent = await sock.sendMessage(targetId, {
-                    image: mediaData,
-                    caption: replyTemplate + 
-                            `┌──「 💬 Pesan 」──\n` +
-                            `❝\n${content.imageMessage?.caption || ''}\n❞\n\n` +
-                            `✨ _Foto Balasan_\n` +
-                            guideTemplate
-                });
-                break;
-                
-            case 'videoMessage':
-                sent = await sock.sendMessage(targetId, {
-                    video: mediaData,
-                    caption: replyTemplate + 
-                            `┌──「 💬 Pesan 」──\n` +
-                            `❝\n${content.videoMessage?.caption || ''}\n❞\n\n` +
-                            `✨ _Video Balasan_\n` +
-                            guideTemplate,
-                    gifPlayback: content.videoMessage?.gifPlayback || false
-                });
-                break;
-                
-            default:
-                throw new Error('Tipe media tidak didukung');
-        }
-
-        return sent;
-
+        const mediaCaption = content[messageType]?.caption;
+        return await sock.sendMessage(targetId, {
+            [messageType === 'imageMessage' ? 'image' : 'video']: mediaData,
+            caption: replyTemplate + 
+                    (mediaCaption ? `┌──「 💬 Pesan 」──\n❝\n${mediaCaption}\n❞\n\n` : '') +
+                    `✨ _${messageType === 'imageMessage' ? 'Foto' : 'Video'} Balasan_`,
+            ...(messageType === 'videoMessage' && {
+                gifPlayback: content.videoMessage?.gifPlayback || false
+            })
+        });
     } catch (error) {
         console.error('Error sending media reply:', error);
         throw error;

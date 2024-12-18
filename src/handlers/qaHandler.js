@@ -1,5 +1,6 @@
 const fs = require('fs');
-const { parse } = require('csv-parse/sync'); // Changed from csv-parse/sync to csv-parse
+const csv = require('csv-parse/sync');
+const { handleAIQuery } = require('./aiHandler');
 
 class QAHandler {
   constructor() {
@@ -10,13 +11,11 @@ class QAHandler {
   loadQAFromCSV(filepath) {
     try {
       const fileContent = fs.readFileSync(filepath, 'utf-8');
-      const records = parse(fileContent, { // Changed from csv.parse to parse
+      const records = csv.parse(fileContent, {
         columns: true,
         skip_empty_lines: true,
-        delimiter: ',',
-        quote: '"',          // Enable quoted fields
-        escape: '"',         // Escape character for quotes
-        relax_column_count: true  // Be more forgiving
+        relax_quotes: true,
+        trim: true
       });
 
       this.qaData = records.map(record => ({
@@ -29,24 +28,54 @@ class QAHandler {
     }
   }
 
-  // Find answer for given question
-  findAnswer(text) {
-    const normalizedInput = text.toLowerCase().trim();
-    const cleanInput = normalizedInput.replace(/[?!.,]/g, '').trim();
+  // Updated findAnswer method
+  async findAnswer(text, sock, senderId) {
+    try {
+      // Strict input validation
+      if (!text || typeof text !== 'string') {
+        console.log('Invalid input type:', typeof text);
+        return null;
+      }
 
-    const match = this.qaData.find(qa => {
+      const normalizedInput = String(text).toLowerCase().trim();
+      if (!normalizedInput) {
+        return null;
+      }
+
+      // Remove special characters and extra spaces
+      const cleanInput = normalizedInput
+        .replace(/[^\w\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (!cleanInput) {
+        return null;
+      }
+
+      const match = this.qaData.find(qa => {
         const cleanQuestion = qa.question.toLowerCase()
-            .replace(/[?!.,]/g, '')
-            .trim();
+          .replace(/[?!.,]/g, '')
+          .trim();
         return cleanInput.includes(cleanQuestion) || 
                cleanQuestion.includes(cleanInput);
-    });
+      });
 
-    if (!match) {
-        return `Maaf, saya tidak menemukan jawaban untuk pertanyaan tersebut 🙏`;
+      if (!match) {
+        // Fix: Pass parameters in correct order
+        try {
+          await handleAIQuery(sock, senderId, text);
+          return null;
+        } catch (error) {
+          console.error('AI Error:', error);
+          return 'Maaf, terjadi kesalahan dalam memproses pertanyaan Anda.';
+        }
+      }
+
+      return match.answer;
+    } catch (error) {
+      console.error('QA Handler Error:', error);
+      return null;
     }
-
-    return match.answer;
   }
 
   // Get all QA pairs

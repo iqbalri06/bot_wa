@@ -10,10 +10,11 @@ function formatNewMessage(timestamp, messageText) {
     ].join('\n');
 }
 
-function formatReplyMessage(timestamp, text) {
+function formatReplyMessage(timestamp, text, originalMessage) {
     return `┌─────「 ✉️ *BALASAN* 」─────┐\n\n` +
            `⏱️ *Waktu* : ${timestamp}\n\n` +
-           `┌──「 💬 Pesan 」──\n❝\n${text}\n❞\n\n` +
+           `┌──「 💬 Membalas Pesan 」──\n❝\n${originalMessage}\n❞\n\n` +
+           `┌──「 💬 Balasan 」──\n❝\n${text}\n❞\n\n` +
            `✨ _Pesan Balasan_\n` +
            `└─────────────────────┘`;
 }

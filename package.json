@@ -25,6 +25,7 @@
     "node-html-parser": "^6.1.13",
     "openai": "^4.76.3",
     "priyansh-ig-downloader": "^2.0.4",
+    "qrcode-terminal": "^0.12.0",
     "qs": "^6.13.1",
     "rahad-media-downloader": "^2.1.14",
     "request": "^2.88.2",

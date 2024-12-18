@@ -9,24 +9,37 @@ class MessageService {
     }
 
     async processMessage(sock, senderId, messageType, text, message) {
-        // Check for reply first
-        const quotedMsg = message.message?.[messageType]?.contextInfo?.stanzaId;
-        if (quotedMsg) {
-            await handleReply(sock, message, senderId);
-            return;
-        }
+        try {
+            if (!sock?.sendMessage || !senderId) {
+                console.error('Invalid sock or senderId');
+                return;
+            }
 
-        // Then check game inputs
-        if (['batu', 'gunting', 'kertas'].includes(text.toLowerCase())) {
-            await handleRPSGame(sock, senderId, text);
-            return;
-        }
+            // Handle quoted messages first
+            if (message?.message?.[messageType]?.contextInfo?.quotedMessage) {
+                await handleReply(sock, message, senderId);
+                return;
+            }
 
-        // Finally check QA if no other handlers matched
-        const answer = this.qaHandler.findAnswer(text);
-        if (answer && answer !== 'Maaf, saya tidak menemukan jawaban untuk pertanyaan tersebut.') {
-            await sock.sendMessage(senderId, { text: answer });
-            return;
+            // Handle game inputs
+            const gameInput = String(text || '').toLowerCase().trim();
+            if (['batu', 'gunting', 'kertas'].includes(gameInput)) {
+                await handleRPSGame(sock, senderId, gameInput);
+                return;
+            }
+
+            // Handle QA with AI fallback
+            const answer = await this.qaHandler.findAnswer(text, sock, senderId);
+            if (answer) {
+                await sock.sendMessage(senderId, {
+                    text: answer,
+                    linkPreview: false
+                });
+            }
+
+        } catch (error) {
+            console.error('Process message error:', error);
+            throw error;
         }
     }
 }
