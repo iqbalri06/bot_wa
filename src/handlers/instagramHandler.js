@@ -1,4 +1,4 @@
-import igdownloader from 'priyansh-ig-downloader';
+const { igdownloader } = require('priyansh-ig-downloader');
 
 // handlers/instagramHandler.js
 // Configuration constants
