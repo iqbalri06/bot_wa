@@ -7,7 +7,7 @@ class TempMailHandler {
 
     async generateEmail(senderId) {
         try {
-            const response = await axios.get('https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1');
+            const response = await axios.get('https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=4');
             const email = response.data[0];
             this.userEmails.set(senderId, email);
             return `📧 Email sementara anda:\n${email}`;
@@ -49,6 +49,8 @@ class TempMailHandler {
     async readMessage(senderId, messageId) {
         const email = this.userEmails.get(senderId);
         if (!email) return '❌ Anda belum memiliki email sementara';
+
+        console.log('Attempting to read message with ID:', messageId); // Add debug log
 
         try {
             const [login, domain] = email.split('@');

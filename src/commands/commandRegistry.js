@@ -39,7 +39,10 @@ const commands = {
         await sock.sendMessage(senderId, { text: response });
     },
     'readmail': async (sock, senderId, params) => {
-        const messageId = params[0];
+        // Handle both string and array params
+        const paramString = Array.isArray(params) ? params.join(' ') : String(params);
+        const messageId = paramString.match(/\d+/)?.[0];
+        
         if (!messageId) {
             await sock.sendMessage(senderId, { text: '❌ Masukkan ID pesan yang ingin dibaca' });
             return;
