@@ -17,7 +17,7 @@ async function getMainMenu() {
 5. 📱 Unduh Video TikTok
 6. 📸 Unduh Video/Foto Instagram
 7. 🎯 Pembuat Stiker
-8. 🎨 Hapus Background Foto
+8. 🎨 Hapus Background
 9. 📧 Email Sementara
 
 *CARA PENGGUNAAN*
