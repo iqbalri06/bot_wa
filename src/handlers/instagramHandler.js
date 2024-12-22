@@ -1,6 +1,6 @@
-// handlers/instagramHandler.js
-const { igdl } = require('btch-downloader');
+import igdownloader from 'priyansh-ig-downloader';
 
+// handlers/instagramHandler.js
 // Configuration constants
 const CONFIG = {
     MAX_RETRIES: 3,
@@ -54,16 +54,15 @@ async function downloadInstagramMedia(url) {
         try {
             console.log(`Attempt ${attempt + 1} of ${CONFIG.MAX_RETRIES}`);
             
-            const result = await igdl(url);
+            const result = await igdownloader(url);
             console.log('API Response:', JSON.stringify(result, null, 2));
 
-            if (!Array.isArray(result) || !result.length) {
+            if (!result?.data?.length) {
                 throw new Error('No media found in response');
             }
 
-            // Deduplikasi hasil media berdasarkan URL
             const uniqueMediaMap = new Map();
-            result.forEach(media => {
+            result.data.forEach(media => {
                 if (!uniqueMediaMap.has(media.url)) {
                     uniqueMediaMap.set(media.url, media);
                 }
@@ -77,7 +76,7 @@ async function downloadInstagramMedia(url) {
                     url: media.url,
                     isVideo: media.type === 'video',
                     thumbnail: media.thumbnail || '',
-                    caption: media.caption || ''
+                    caption: result.caption || ''
                 }))
             };
 
