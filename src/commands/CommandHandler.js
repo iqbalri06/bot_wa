@@ -1,26 +1,21 @@
-
 const commands = require('./commandRegistry');
 
 class CommandHandler {
     async executeCommand(sock, senderId, messageType, text, message) {
-        const command = this.parseCommand(text);
-        if (!command) return;
+        if (!text.startsWith('!')) return;
 
-        const handler = commands[command.name];
+        // Split command and parameters more cleanly
+        const args = text.trim().split(/\s+/);
+        const cmdName = args[0].substring(1); // Remove '!' from command
+        const params = args.slice(1).join(' '); // Join remaining args back into string
+
+        const handler = commands[cmdName];
         if (handler) {
-            await handler(sock, senderId, command.params, messageType, message);
+            await handler(sock, senderId, params, messageType, message);
         }
     }
 
-    parseCommand(text) {
-        if (!text.startsWith('!')) return null;
-
-        const parts = text.slice(1).split(' ');
-        return {
-            name: parts[0],
-            params: parts.slice(1).join(' ')
-        };
-    }
+    // Remove parseCommand method as it's no longer needed
 }
 
 module.exports = CommandHandler;

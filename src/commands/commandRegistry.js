@@ -7,8 +7,8 @@ const { handleSendCommand } = require('../handlers/sendHandler');
 const { getMainMenu } = require('../menus/mainMenu');
 const gameMenu = require('../menus/gameMenu');
 const instagramMenu = require('../menus/instagramMenu');
-const { responses } = require('../commands/textResponses');
-const menus = require('../menus');
+const { handleRemoveBackground } = require('../handlers/bgHandler');
+const tempMailHandler = require('../handlers/tempMailHandler');
 
 const commands = {
     'ai': (sock, senderId, params) => handleAIQuery(sock, senderId, params),
@@ -25,8 +25,27 @@ const commands = {
     'game': async (sock, senderId) => {
         await sock.sendMessage(senderId, { text: gameMenu });
     },
+    'rmbg': (sock, senderId, params, messageType, message) => 
+        handleRemoveBackground(sock, senderId, messageType, message),
     'instagram': async (sock, senderId) => {
         await sock.sendMessage(senderId, { text: instagramMenu });
+    },
+    'tempmail': async (sock, senderId) => {
+        const response = await tempMailHandler.generateEmail(senderId);
+        await sock.sendMessage(senderId, { text: response });
+    },
+    'cekmail': async (sock, senderId) => {
+        const response = await tempMailHandler.checkMessages(senderId);
+        await sock.sendMessage(senderId, { text: response });
+    },
+    'readmail': async (sock, senderId, params) => {
+        const messageId = params[0];
+        if (!messageId) {
+            await sock.sendMessage(senderId, { text: '❌ Masukkan ID pesan yang ingin dibaca' });
+            return;
+        }
+        const response = await tempMailHandler.readMessage(senderId, messageId);
+        await sock.sendMessage(senderId, { text: response });
     },
 
 };

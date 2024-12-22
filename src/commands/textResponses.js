@@ -18,6 +18,7 @@ const responses = {
     '5': menus.tiktok,
     '6': menus.instagram,
     '7': menus.stiker,
+    '8': menus.bg,
 
     // Error responses
     'invalid_format': '❌ Format pesan tidak valid!\n\nGunakan format:\n!kirim <nomor> <pesan>',

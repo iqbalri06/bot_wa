@@ -1,22 +1,24 @@
-
 function formatNewMessage(timestamp, messageText) {
     return [
-        `┌───「 📨 *PESAN BARU* 」──┐\n`,
-        `⏱️ *Waktu* : ${timestamp}`,
-        `👤 *Dari* : Anonim\n`,
-        `┌──「 💭 Pesan 」──\n❝\n${messageText}\n❞\n`,
-        `_↪️ Gunakan fitur Balas untuk mengirim pesan_`,
-        `└─────────────────────┘`
+        `📩 *Pesan Masuk*`,
+        `${timestamp} • Anonim`,
+        `💬 Pesan:\n➥ ${messageText}\n`,
+        `📝 *Panduan Membalas:*`,
+        `1️⃣ Tekan lama pesan ini`,
+        `2️⃣ Pilih "Reply"`,
+        `3️⃣ Ketik balasan kamu`,
+        `4️⃣ Kirim`
     ].join('\n');
 }
 
 function formatReplyMessage(timestamp, text, originalMessage) {
-    return `┌─────「 ✉️ *BALASAN* 」─────┐\n\n` +
-           `⏱️ *Waktu* : ${timestamp}\n\n` +
-           `┌──「 💬 Membalas Pesan 」──\n❝\n${originalMessage}\n❞\n\n` +
-           `┌──「 💬 Balasan 」──\n❝\n${text}\n❞\n\n` +
-           `✨ _Pesan Balasan_\n` +
-           `└─────────────────────┘`;
+    return [
+        `✉️ *Balasan Terkirim*`,
+        `${timestamp}`,
+        `▢ Pesan: ${originalMessage}`,
+        `▣ Balas: ${text}\n`,
+        `✨ Balasan sudah diteruskan ke pengirim`
+    ].join('\n');
 }
 
 module.exports = {

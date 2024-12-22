@@ -42,10 +42,10 @@ class MessageHandler {
             const senderId = message.key.remoteJid;
 
             // Enhanced content validation
-            const validContent = typeof content === 'string' ? 
-                content : 
-                typeof content === 'object' ? 
-                    JSON.stringify(content) : 
+            const validContent = typeof content === 'string' ?
+                content :
+                typeof content === 'object' ?
+                    JSON.stringify(content) :
                     String(content || '');
 
             if (!validContent) {
@@ -57,7 +57,7 @@ class MessageHandler {
 
             // Process message with validated content
             const text = validContent.toString().trim();
-            
+
             // Handle plain "menu" text
             if (text === 'menu' || text === '!menu') {
                 const { getMainMenu } = require('../menus/mainMenu');
@@ -67,7 +67,7 @@ class MessageHandler {
             }
 
             // Handle menu selections
-            if (/^[1-7]$/.test(text)) {
+            if (/^[1-9]$/.test(text)) {
                 await this.handleMenuSelection(sock, senderId, parseInt(text));
                 return;
             }
@@ -97,8 +97,8 @@ class MessageHandler {
 
         try {
             // Ensure proper message structure
-            const messageContent = typeof content === 'string' ? 
-                { text: content, linkPreview: false } : 
+            const messageContent = typeof content === 'string' ?
+                { text: content, linkPreview: false } :
                 { ...content, linkPreview: false };
 
             const sent = await sock.sendMessage(senderId, messageContent);
@@ -113,15 +113,13 @@ class MessageHandler {
         try {
             switch (selection) {
                 case 1: // AI Assistant
-                    await this.sendResponse(sock, senderId, { text: require('../menus/instagramMenu')});
+                    await this.sendResponse(sock, senderId, { text: require('../menus/instagramMenu') });
                     break;
                 case 2: // Anonymous Message
-                    await this.sendResponse(sock, senderId, {text: require('../menus/anonymousMenu')});
+                    await this.sendResponse(sock, senderId, { text: require('../menus/anonymousMenu') });
                     break;
                 case 3: // Bot Info
-                    const { getMainMenu } = require('../menus/aboutMenu');
-                    const menu = await getMainMenu();
-                    await this.sendResponse(sock, senderId, menu);
+                    await this.sendResponse(sock, senderId, { text: require('../menus/aboutMenu') });
                     break;
                 case 4: // Fun Games
                     await this.sendResponse(sock, senderId, { text: require('../menus/gameMenu') });
@@ -133,11 +131,17 @@ class MessageHandler {
                     await this.sendResponse(sock, senderId, { text: require('../menus/instagramMenu') });
                     break;
                 case 7: // Sticker
-                    await this.sendResponse(sock, senderId, {text: require('../menus/stikerMenu')});
+                    await this.sendResponse(sock, senderId, { text: require('../menus/stikerMenu') });
+                    break;
+                case 8: // remove bg
+                    await this.sendResponse(sock, senderId, { text: require('../menus/bgMenu') });
+                    break;
+                case 9: // temp mail
+                    await this.sendResponse(sock, senderId, { text: require('../menus/tempMailMenu') });
                     break;
                 default:
-                    await this.sendResponse(sock, senderId, { 
-                        text: '❌ Pilihan tidak valid. Silakan pilih 1-7' 
+                    await this.sendResponse(sock, senderId, {
+                        text: '❌ Pilihan tidak valid. Silakan pilih 1-9'
                     });
             }
         } catch (error) {

@@ -19,7 +19,7 @@ async function handleSendCommand(sock, senderId, params) {
     try {
         // Kirim pesan ke nomor tujuan
         const sent = await sock.sendMessage(formattedNumber, {
-            image: { url: './asset/img/banner_pesan.png' },
+            image: { url: './asset/img/banner_techbalion.png' },
             caption: formatNewMessage(timestamp, messageText)
         });
         

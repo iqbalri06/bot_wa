@@ -8,5 +8,7 @@ module.exports = {
     tiktok: require('./tiktokMenu'),
     instagram: require('./instagramMenu'),
     stiker: require('./stikerMenu'),
-    ai: require('./aiMenu')
+    ai: require('./aiMenu'),
+    bg: require('./bgMenu'),
+    mail: require('./tempMailMenu')
 };

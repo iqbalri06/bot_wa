@@ -1,4 +1,3 @@
-
 function getMessageContent(message) {
     if (!message.message) return { messageType: '', content: '' };
     
@@ -7,7 +6,16 @@ function getMessageContent(message) {
 
     switch(messageType) {
         case 'imageMessage':
-            content = message.message.imageMessage.caption || '';
+            content = message.message.imageMessage.caption || '[Image]';
+            break;
+        case 'videoMessage':
+            content = message.message.videoMessage.caption || '[Video]';
+            break;
+        case 'audioMessage':
+            content = '[Audio]';
+            break;
+        case 'stickerMessage':
+            content = '[Sticker]';
             break;
         case 'conversation':
             content = message.message.conversation || '';
@@ -22,6 +30,21 @@ function getMessageContent(message) {
     return { messageType, content };
 }
 
+// Add new helper function
+function getQuotedMessage(message) {
+    const messageType = Object.keys(message.message)[0];
+    const msg = message.message[messageType];
+    
+    if (msg?.contextInfo?.quotedMessage) {
+        return {
+            quoted: msg.contextInfo.quotedMessage,
+            stanzaId: msg.contextInfo.stanzaId
+        };
+    }
+    return null;
+}
+
 module.exports = {
-    getMessageContent
+    getMessageContent,
+    getQuotedMessage
 };
