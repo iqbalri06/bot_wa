@@ -15,6 +15,10 @@ module.exports = {
         apiKey: 'AIzaSyCTiweyGV7t7pVeJ1aQAkzUucm2AiB-xLs',
         model: 'gemini-1.5-flash'
     },
+    maintenance: {
+        enabled: false,
+        message: "🛠️ *Bot sedang dalam maintenance*\n\nMohon maaf, bot sedang dalam perbaikan/update.\nSilakan coba beberapa saat lagi.\n\nTerimakasih atas pengertiannya! 🙏"
+    },
     commands: {
         start: ['hi', 'halo', 'mulai'],
         public: ['menu', 'bantuan', 'tentang', 'ping'],

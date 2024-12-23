@@ -98,9 +98,9 @@ async function connectToWhatsApp(retryCount = 0) {
                     process.exit(1);
                 }
             } else if (connection === 'connecting') {
-                console.log('Connecting to WhatsApp...');
+                console.log('Connecting to WhatsApp...' + (config.maintenance.enabled ? ' (MAINTENANCE MODE)' : ''));
             } else if (connection === 'open') {
-                console.log('Connected successfully!');
+                console.log('Connected successfully!' + (config.maintenance.enabled ? ' (MAINTENANCE MODE)' : ''));
             }
             
             // Save credentials whenever updated

@@ -3,6 +3,7 @@ const MessageService = require('../services/MessageService');
 const { getMessageContent } = require('../utils/messageUtils');
 const { handleError } = require('../utils/errorHandler');
 const QAHandler = require('./qaHandler');
+const config = require('../config/config');
 
 class MessageHandler {
     constructor() {
@@ -38,9 +39,18 @@ class MessageHandler {
                 return;
             }
 
-            const { messageType, content } = getMessageContent(message) || {};
             const senderId = message.key.remoteJid;
 
+            // Check maintenance mode
+            if (config.maintenance.enabled) {
+                await sock.sendMessage(senderId, { 
+                    text: config.maintenance.message 
+                });
+                return;
+            }
+
+            const { messageType, content } = getMessageContent(message) || {};
+            
             // Enhanced content validation
             const validContent = typeof content === 'string' ?
                 content :
