@@ -114,9 +114,24 @@ async function connectToWhatsApp(retryCount = 0) {
                 const isGroup = message.key.remoteJid.endsWith('@g.us');
                 const sender = isGroup ? message.key.participant : message.key.remoteJid;
                 if (isMaintenanceMode) {
-                    if (!config.maintenance.allowedUsers.includes(sender)) {
-                        await sock.sendMessage(sender, { 
-                            text: config.maintenance.message 
+                    const isOwner = config.owner.includes(sender);
+                    const isAllowedUser = config.maintenance.allowedUsers.includes(sender);
+                    if (!isOwner && !isAllowedUser) {
+                        await sock.sendMessage(sender, {
+                            text: config.maintenance.message
+                        });
+                        // Kirim kontak owner dalam format vCard
+                        await sock.sendMessage(sender, {
+                            contacts: {
+                                displayName: 'Owner Bot',
+                                contacts: [{
+                                    vcard: `BEGIN:VCARD
+VERSION:3.0
+FN:Developer Bot
+TEL;type=CELL;type=VOICE;waid=${config.owner[0].replace('@s.whatsapp.net','')}:${config.owner[0].replace('@s.whatsapp.net','')}
+END:VCARD`
+                                }]
+                            }
                         });
                         return;
                     }
