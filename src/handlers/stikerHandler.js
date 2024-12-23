@@ -13,36 +13,44 @@ async function createSticker(buffer) {
 }
 
 async function sendReaction(sock, message, emoji) {
-    await sock.sendMessage(message.key.remoteJid, {
-        react: {
-            text: emoji,
-            key: message.key
-        }
-    });
+    if (!message?.key?.remoteJid) return;
+    
+    try {
+        await sock.sendMessage(message.key.remoteJid, {
+            react: {
+                text: emoji,
+                key: message.key
+            }
+        });
+    } catch (error) {
+        console.error('Error sending reaction:', error);
+    }
 }
 
 async function handleSticker(sock, message, senderId) {
+    if (!message || !senderId) {
+        console.error('Invalid message or senderId');
+        return;
+    }
+
     try {
-        let imageMessage;
+        let imageMessage = null;
         
-        // Check direct image with caption
-        if (message.message.imageMessage) {
-            const caption = message.message.imageMessage.caption || '';
-            if (caption.toLowerCase().trim() === '!sticker') {
+        // Check if message has a valid structure
+        if (message.message) {
+            // Check direct image with caption
+            if (message.message.imageMessage) {
                 imageMessage = message.message.imageMessage;
             }
-        }
-        
-        // Check quoted image if no direct image
-        if (!imageMessage) {
-            const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-            if (quoted?.imageMessage) {
-                imageMessage = quoted.imageMessage;
+            // Check quoted image
+            else if (message.message.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage) {
+                imageMessage = message.message.extendedTextMessage.contextInfo.quotedMessage.imageMessage;
             }
         }
 
         if (!imageMessage) {
             await sendReaction(sock, message, '❌');
+            await sock.sendMessage(senderId, { text: 'Please send an image or reply to an image with !sticker' });
             return;
         }
 
@@ -67,6 +75,7 @@ async function handleSticker(sock, message, senderId) {
     } catch (error) {
         console.error('Sticker creation error:', error);
         await sendReaction(sock, message, '❌');
+        await sock.sendMessage(senderId, { text: 'Failed to create sticker. Please try again.' });
     }
 }
 

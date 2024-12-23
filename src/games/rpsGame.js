@@ -28,23 +28,21 @@ async function handleRPSGame(sock, senderId, text) {
     }
     const playerState = gameState.get(senderId);
     
-    // Clean input text
-    const input = text.toLowerCase().trim();
+    // Clean input text - handle both string and array inputs
+    const input = Array.isArray(text) ? text.join(' ').toLowerCase().trim() : text.toLowerCase().trim();
 
-    // Show menu if command is !suit
-    if (input === '!suit') {
-        const menuMessage = `╔══『 🎮 *SUIT GAME* 』══╗
+    // Show menu if command is !suit or empty
+    if (input === '!suit' || !input) {
+        const menuMessage = `🎮 *SUIT GAME*
 
-📍 *Cara Main:*
-╎ • Ketik langsung:
-╎ 🗿 batu
-╎ ✂️ gunting
-╎ 📄 kertas
+Pilih Senjatamu:
+${emojis.batu} Batu
+${emojis.gunting} Gunting
+${emojis.kertas} Kertas
 
-🏆 *Skor Kamu:* ${playerState.score}
+🏆 Skor: ${playerState.score}
 
-_Ketik pilihanmu tanpa "!"_
-╚═════════════════╝`;
+✨ Ketik: batu/gunting/kertas`;
 
         await sock.sendMessage(senderId, { text: menuMessage });
         return;
@@ -59,22 +57,26 @@ _Ketik pilihanmu tanpa "!"_
         if (result === 'win') playerState.score += 1;
         if (result === 'lose') playerState.score = Math.max(0, playerState.score - 1);
 
-        const resultMessages = {
-            'win': '🎉 Kamu MENANG!',
-            'lose': '😔 Kamu KALAH!',
-            'draw': '🤝 SERI!'
+        const battleEmojis = {
+            'win': '⚔️',
+            'lose': '💥',
+            'draw': '🔄'
         };
 
-        const gameMessage = `╔══『 🎮 *HASIL SUIT* 』══╗
+        const resultMessages = {
+            'win': '🌟 Kemenangan!',
+            'lose': '💫 Kalah!',
+            'draw': '🤝 Seri!'
+        };
 
-Kamu: ${emojis[input]} ${input}
-Bot: ${emojis[botChoice]} ${botChoice}
+        const gameMessage = `${battleEmojis[result]} *SUIT*
+
+${emojis[input]} VS ${emojis[botChoice]}
 
 ${resultMessages[result]}
 🏆 Skor: ${playerState.score}
 
-_Main lagi? Ketik pilihanmu!_
-╚═════════════════╝`;
+▸ Main lagi? Ketik pilihanmu!`;
 
         await sock.sendMessage(senderId, { text: gameMessage });
     }

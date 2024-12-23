@@ -14,9 +14,10 @@ const commands = {
     'ai': (sock, senderId, params) => handleAIQuery(sock, senderId, params),
     'ig': (sock, senderId, params) => handleInstagramCommand(sock, senderId, params),
     'tt': (sock, senderId, params) => handleTiktokCommand(sock, senderId, params),
-    'suit': handleRPSGame,
-    'rps': handleRPSGame,
+    'suit': (sock, senderId, params) => handleRPSGame(sock, senderId, params || '!suit'),
+    'rps': (sock, senderId, params) => handleRPSGame(sock, senderId, params || '!suit'),
     'sticker': handleSticker,
+    's': handleSticker, // Add alias for convenience
     'kirim': handleSendCommand,
     'menu': async (sock, senderId) => {
         const menu = await getMainMenu();
