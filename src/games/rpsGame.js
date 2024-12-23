@@ -22,9 +22,14 @@ function determineWinner(playerChoice, botChoice) {
 }
 
 async function handleRPSGame(sock, senderId, text) {
-    // Initialize or get game state
+    // Initialize or get game state with bot score
     if (!gameState.has(senderId)) {
-        gameState.set(senderId, { score: 0 });
+        gameState.set(senderId, { 
+            score: 0, 
+            botScore: 0,
+            streak: 0,
+            highestStreak: 0
+        });
     }
     const playerState = gameState.get(senderId);
     
@@ -40,7 +45,11 @@ ${emojis.batu} Batu
 ${emojis.gunting} Gunting
 ${emojis.kertas} Kertas
 
-🏆 Skor: ${playerState.score}
+📊 *STATISTIK*
+🏆 Skor Kamu: ${playerState.score}
+🤖 Skor Bot: ${playerState.botScore}
+🔥 Streak: ${playerState.streak}
+⭐ Highest Streak: ${playerState.highestStreak}
 
 ✨ Ketik: batu/gunting/kertas`;
 
@@ -53,9 +62,19 @@ ${emojis.kertas} Kertas
         const botChoice = choices[Math.floor(Math.random() * choices.length)];
         const result = determineWinner(input, botChoice);
 
-        // Update score
-        if (result === 'win') playerState.score += 1;
-        if (result === 'lose') playerState.score = Math.max(0, playerState.score - 1);
+        // Update scores and streaks
+        if (result === 'win') {
+            playerState.score += 1;
+            playerState.botScore = Math.max(0, playerState.botScore - 1); // Decrease bot score
+            playerState.streak += 1;
+            playerState.highestStreak = Math.max(playerState.streak, playerState.highestStreak);
+        } else if (result === 'lose') {
+            playerState.botScore += 1;
+            playerState.streak = 0;
+            playerState.score = Math.max(0, playerState.score - 1);
+        } else {
+            playerState.streak = 0;
+        }
 
         const battleEmojis = {
             'win': '⚔️',
@@ -74,7 +93,11 @@ ${emojis.kertas} Kertas
 ${emojis[input]} VS ${emojis[botChoice]}
 
 ${resultMessages[result]}
-🏆 Skor: ${playerState.score}
+📊 *STATISTIK*
+🏆 Skor Kamu: ${playerState.score}
+🤖 Skor Bot: ${playerState.botScore}
+🔥 Streak: ${playerState.streak}
+⭐ Highest Streak: ${playerState.highestStreak}
 
 ▸ Main lagi? Ketik pilihanmu!`;
 
