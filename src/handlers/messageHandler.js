@@ -41,6 +41,14 @@ class MessageHandler {
 
             const senderId = message.key.remoteJid;
 
+            // Check dev mode first, then maintenance mode
+            if (process.env.NODE_ENV === 'development') {
+                await sock.sendMessage(senderId, { 
+                    text: config.environment.devModeMessage 
+                });
+                return;
+            }
+
             // Check maintenance mode
             if (config.maintenance.enabled) {
                 await sock.sendMessage(senderId, { 

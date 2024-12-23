@@ -12,6 +12,69 @@ try {
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// Add session state tracker
+const sessionState = {
+    prodActive: false,
+    devActive: false,
+    lastActivePath: null
+};
+
+// Enhanced session management
+async function manageActiveSessions(currentPath, isDevMode) {
+    const fs = require('fs');
+    const otherPath = isDevMode ? 
+        config.environment.productionSession : 
+        config.environment.developmentSession;
+
+    try {
+        // Update session state
+        if (isDevMode) {
+            sessionState.devActive = true;
+            if (sessionState.prodActive && fs.existsSync(config.environment.productionSession)) {
+                console.log('Deactivating production instance...');
+                // Temporarily rename prod session to prevent its use
+                fs.renameSync(
+                    config.environment.productionSession,
+                    config.environment.productionSession + '_inactive'
+                );
+                sessionState.prodActive = false;
+            }
+        } else {
+            sessionState.prodActive = true;
+            // Check if dev session exists but is inactive
+            if (fs.existsSync(config.environment.developmentSession + '_inactive')) {
+                console.log('Restoring development instance...');
+                fs.renameSync(
+                    config.environment.developmentSession + '_inactive',
+                    config.environment.developmentSession
+                );
+            }
+        }
+        
+        sessionState.lastActivePath = currentPath;
+    } catch (err) {
+        console.error('Session management error:', err);
+    }
+}
+
+// Add cleanup on exit
+async function handleProcessExit() {
+    const fs = require('fs');
+    try {
+        // Restore production session if it was deactivated
+        if (fs.existsSync(config.environment.productionSession + '_inactive')) {
+            fs.renameSync(
+                config.environment.productionSession + '_inactive',
+                config.environment.productionSession
+            );
+            console.log('Restored production session on exit');
+        }
+    } catch (err) {
+        console.error('Cleanup error:', err);
+    }
+    process.exit(0);
+}
+
 // Add cleanup function
 async function cleanupSession(sessionPath) {
     try {
@@ -27,8 +90,16 @@ async function cleanupSession(sessionPath) {
 
 async function connectToWhatsApp(retryCount = 0) {
     try {
-        // Check if other instance is running by trying to read the other environment's auth file
         const fs = require('fs');
+        const isDevMode = process.env.NODE_ENV === 'development';
+        const sessionPath = isDevMode ? 
+            config.environment.developmentSession : 
+            config.environment.productionSession;
+
+        // Manage active sessions before connecting
+        await manageActiveSessions(sessionPath, isDevMode);
+
+        // Check if other instance is running by trying to read the other environment's auth file
         const otherEnvPath = process.env.NODE_ENV === 'development' ? 
             config.environment.productionSession :
             config.environment.developmentSession;
@@ -40,7 +111,7 @@ async function connectToWhatsApp(retryCount = 0) {
             console.log('Other instance detected - enabling maintenance mode');
         }
 
-        const { state, saveCreds } = await useMultiFileAuthState(config.session.path);
+        const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
         
         const sock = makeWASocket({
             printQRInTerminal: true,
@@ -118,6 +189,12 @@ async function connectToWhatsApp(retryCount = 0) {
             } else if (connection === 'open') {
                 console.log(envPrefix + 'Connected successfully!' + 
                     (config.maintenance.enabled ? ' (MAINTENANCE MODE)' : ''));
+
+                // Set up exit handler only once
+                if (!process.listenerCount('SIGINT')) {
+                    process.on('SIGINT', handleProcessExit);
+                    process.on('SIGTERM', handleProcessExit);
+                }
             }
             
             // Save credentials whenever updated

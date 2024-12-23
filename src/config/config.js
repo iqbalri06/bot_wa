@@ -11,13 +11,21 @@ module.exports = {
     environment: {
         current: process.env.NODE_ENV || 'production', // 'production' or 'development'
         productionSession: 'prod_auth_info_baileys',
-        developmentSession: 'dev_auth_info_baileys'
+        developmentSession: 'dev_auth_info_baileys',
+        autoSwitchToDev: true, // new setting to control auto-switching behavior
+        devModeMessage: "🔧 *Bot sedang dalam mode Development*\n\nMohon maaf, saat ini bot sedang dalam pengembangan.\nSilakan gunakan bot production untuk layanan normal.\n\nTerimakasih atas pengertiannya! 🙏",
+        sessionSwitching: {
+            enabled: true,
+            deactivationSuffix: '_inactive',
+            switchDelay: 5000 // delay in ms before switching sessions
+        }
     },
     session: {
-        // Dynamic session path based on environment
-        path: process.env.NODE_ENV === 'development' ? 
-            'dev_auth_info_baileys' : 
-            'prod_auth_info_baileys'
+        get path() {
+            return process.env.NODE_ENV === 'development' ? 
+                'dev_auth_info_baileys' : 
+                'prod_auth_info_baileys';
+        }
     },
     gemini: {
         apiKey: 'AIzaSyCTiweyGV7t7pVeJ1aQAkzUucm2AiB-xLs',
