@@ -12,132 +12,27 @@ try {
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// Add session state tracker
-const sessionState = {
-    prodActive: false,
-    devActive: false,
-    lastActivePath: null
-};
-
-// Enhanced session management
-async function manageActiveSessions(currentPath, isDevMode) {
-    const fs = require('fs');
-    const otherPath = isDevMode ? 
-        config.environment.productionSession : 
-        config.environment.developmentSession;
-
-    try {
-        // Update session state
-        if (isDevMode) {
-            sessionState.devActive = true;
-            if (sessionState.prodActive && fs.existsSync(config.environment.productionSession)) {
-                console.log('Deactivating production instance...');
-                // Temporarily rename prod session to prevent its use
-                fs.renameSync(
-                    config.environment.productionSession,
-                    config.environment.productionSession + '_inactive'
-                );
-                sessionState.prodActive = false;
-            }
-        } else {
-            sessionState.prodActive = true;
-            // Check if dev session exists but is inactive
-            if (fs.existsSync(config.environment.developmentSession + '_inactive')) {
-                console.log('Restoring development instance...');
-                fs.renameSync(
-                    config.environment.developmentSession + '_inactive',
-                    config.environment.developmentSession
-                );
-            }
-        }
-        
-        sessionState.lastActivePath = currentPath;
-    } catch (err) {
-        console.error('Session management error:', err);
-    }
-}
-
-// Add cleanup on exit
-async function handleProcessExit() {
-    const fs = require('fs');
-    try {
-        // Restore production session if it was deactivated
-        if (fs.existsSync(config.environment.productionSession + '_inactive')) {
-            fs.renameSync(
-                config.environment.productionSession + '_inactive',
-                config.environment.productionSession
-            );
-            console.log('Restored production session on exit');
-        }
-    } catch (err) {
-        console.error('Cleanup error:', err);
-    }
-    process.exit(0);
-}
-
-// Add cleanup function
-async function cleanupSession(sessionPath) {
-    try {
-        const fs = require('fs');
-        if (fs.existsSync(sessionPath)) {
-            fs.rmSync(sessionPath, { recursive: true, force: true });
-            console.log('Session cleaned up due to conflict');
-        }
-    } catch (err) {
-        console.error('Session cleanup failed:', err);
-    }
-}
-
 async function connectToWhatsApp(retryCount = 0) {
     try {
-        const fs = require('fs');
-        const isDevMode = process.env.NODE_ENV === 'development';
-        const sessionPath = isDevMode ? 
-            config.environment.developmentSession : 
-            config.environment.productionSession;
-
-        // Manage active sessions before connecting
-        await manageActiveSessions(sessionPath, isDevMode);
-
-        // Check if other instance is running by trying to read the other environment's auth file
-        const otherEnvPath = process.env.NODE_ENV === 'development' ? 
-            config.environment.productionSession :
-            config.environment.developmentSession;
-
-        const isOtherInstanceActive = fs.existsSync(otherEnvPath);
-        
-        if (isOtherInstanceActive && config.maintenance.forceMaintenanceOnDualLogin) {
-            config.maintenance.enabled = true;
-            console.log('Other instance detected - enabling maintenance mode');
-        }
-
-        const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+        const { state, saveCreds } = await useMultiFileAuthState(config.session.path);
         
         const sock = makeWASocket({
             printQRInTerminal: true,
             syncFullHistory: false,
-            markOnlineOnConnect: false, // Changed to false to prevent conflicts
-            connectTimeoutMs: 30000, // Reduced timeout
+            markOnlineOnConnect: true, // Changed to true to show online status
+            connectTimeoutMs: 60000,
+            retryRequestDelayMs: 1000, // Reduced delay for faster reconnection
+            auth: state,
+            browser: [config.botInfo.name, 'Chrome', config.botInfo.version],
+            defaultQueryTimeoutMs: 60000, // Add timeout for queries
+            keepAliveIntervalMs: 10000, // Add keep-alive interval
             auth: {
                 creds: state.creds,
                 keys: makeCacheableSignalKeyStore(state.keys, logger)
             },
-            browser: [config.botInfo.name, 'Chrome', config.botInfo.version],
-            defaultQueryTimeoutMs: 30000, // Reduced timeout
-            keepAliveIntervalMs: 15000, // Increased interval
-            retryRequestDelayMs: 2000, // Increased delay
+            // Add message retries
             msgRetryCounterMap: {},
-            generateHighQualityLinkPreview: false, // Set to false to reduce load
-            // Add these options for better stream handling
-            patchMessageBeforeSending: msg => {
-                const requiresPatch = !!(
-                    msg.buttonsMessage || msg.templateMessage || msg.listMessage
-                );
-                if (requiresPatch) {
-                    msg = { viewOnceMessage: { message: { messageContextInfo: { deviceListMetadataVersion: 2 }, ...msg } } };
-                }
-                return msg;
-            }
+            generateHighQualityLinkPreview: true
         });
 
         // Add custom message processing
@@ -158,43 +53,17 @@ async function connectToWhatsApp(retryCount = 0) {
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect, qr } = update;
             
-            const envPrefix = process.env.NODE_ENV === 'development' ? '[DEV] ' : '[PROD] ';
-            
             if (connection === 'close') {
-                const statusCode = lastDisconnect?.error?.output?.statusCode;
-                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-                
-                console.log('Connection closed due to:', lastDisconnect?.error);
-
-                // Handle stream error specifically
-                if (statusCode === 440) {
-                    console.log('Stream conflict detected, cleaning up session...');
-                    await cleanupSession(config.session.path);
-                    await delay(5000); // Wait 5 seconds before reconnecting
-                    return connectToWhatsApp(0); // Reset retry count after cleanup
-                }
+                const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
+                console.log('Connection closed due to:', lastDisconnect?.error, '\nReconnecting:', shouldReconnect);
                 
                 if (shouldReconnect) {
-                    // Add exponential backoff
-                    const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
-                    console.log(`Reconnecting in ${backoffDelay/1000} seconds...`);
-                    setTimeout(() => connectToWhatsApp(retryCount + 1), backoffDelay);
-                } else {
-                    console.log('Connection closed permanently');
-                    process.exit(1);
+                    connectToWhatsApp(); // Recursive reconnection
                 }
             } else if (connection === 'connecting') {
-                console.log(envPrefix + 'Connecting to WhatsApp...' + 
-                    (config.maintenance.enabled ? ' (MAINTENANCE MODE)' : ''));
+                console.log('Connecting to WhatsApp...');
             } else if (connection === 'open') {
-                console.log(envPrefix + 'Connected successfully!' + 
-                    (config.maintenance.enabled ? ' (MAINTENANCE MODE)' : ''));
-
-                // Set up exit handler only once
-                if (!process.listenerCount('SIGINT')) {
-                    process.on('SIGINT', handleProcessExit);
-                    process.on('SIGTERM', handleProcessExit);
-                }
+                console.log('Connected successfully!');
             }
             
             // Save credentials whenever updated
@@ -214,15 +83,6 @@ async function connectToWhatsApp(retryCount = 0) {
             await connectToWhatsApp(); // Attempt to reconnect
         });
 
-        // Enhanced error handling
-        sock.ws.on('error', async (err) => {
-            console.error('WebSocket Error:', err);
-            if (err.message.includes('Stream Errored')) {
-                await cleanupSession(config.session.path);
-                process.exit(1); // Force restart to clean up everything
-            }
-        });
-
         // Update message handling
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
             if (type !== 'notify') return;
@@ -238,28 +98,9 @@ async function connectToWhatsApp(retryCount = 0) {
             }
         });
 
-        // Add connection cleanup on process exit
-        process.on('SIGINT', async () => {
-            console.log('Closing connection...');
-            if (sock) {
-                try {
-                    await sock.end();
-                    await sock.logout();
-                } catch (err) {
-                    console.error('Error during cleanup:', err);
-                }
-            }
-            process.exit(0);
-        });
-
         return sock;
     } catch (error) {
         logger.error('Failed to connect:', error);
-        if (error.message.includes('Stream Errored')) {
-            await cleanupSession(config.session.path);
-            await delay(5000);
-            return connectToWhatsApp(0);
-        }
         const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
         setTimeout(() => connectToWhatsApp(retryCount + 1), backoffDelay);
     }
