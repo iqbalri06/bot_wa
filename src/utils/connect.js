@@ -68,6 +68,7 @@ async function connectToWhatsApp(retryCount = 0) {
                 if (statusCode === 440) {
                     console.log('Session conflict detected, enabling maintenance mode...');
                     isMaintenanceMode = true;
+                    config.maintenance.enabled = true; // Tambahkan baris ini
                     const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
                     setTimeout(() => connectToWhatsApp(retryCount + 1), backoffDelay);
                     return;
