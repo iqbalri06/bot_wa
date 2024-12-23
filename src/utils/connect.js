@@ -16,6 +16,9 @@ async function connectToWhatsApp(retryCount = 0) {
     try {
         const { state, saveCreds } = await useMultiFileAuthState(config.session.path);
         
+        // Add maintenance mode check on startup
+        let isMaintenanceMode = config.maintenance.enabled;
+        
         const sock = makeWASocket({
             printQRInTerminal: true,
             syncFullHistory: false,
@@ -54,11 +57,21 @@ async function connectToWhatsApp(retryCount = 0) {
             const { connection, lastDisconnect, qr } = update;
             
             if (connection === 'close') {
-                const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-                console.log('Connection closed due to:', lastDisconnect?.error, '\nReconnecting:', shouldReconnect);
+                const statusCode = lastDisconnect?.error?.output?.statusCode;
                 
+                // Handle session conflict (440)
+                if (statusCode === 440) {
+                    console.log('Session conflict detected, enabling maintenance mode...');
+                    isMaintenanceMode = true;
+                    const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+                    setTimeout(() => connectToWhatsApp(retryCount + 1), backoffDelay);
+                    return;
+                }
+
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
                 if (shouldReconnect) {
-                    connectToWhatsApp(); // Recursive reconnection
+                    console.log(`Reconnecting in 5 seconds...`);
+                    setTimeout(() => connectToWhatsApp(retryCount + 1), 5000);
                 }
             } else if (connection === 'connecting') {
                 console.log('Connecting to WhatsApp...');
@@ -90,6 +103,17 @@ async function connectToWhatsApp(retryCount = 0) {
             try {
                 const message = messages[0];
                 if (!message) return;
+
+                // Check maintenance mode
+                if (isMaintenanceMode) {
+                    const sender = message.key.remoteJid;
+                    if (!config.maintenance.allowedUsers.includes(sender)) {
+                        await sock.sendMessage(sender, { 
+                            text: config.maintenance.message 
+                        });
+                        return;
+                    }
+                }
                 
                 const processedMessage = await processMessage(message);
                 await handleMessage(sock, processedMessage);

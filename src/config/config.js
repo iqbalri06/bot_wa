@@ -8,24 +8,9 @@ module.exports = {
         author: 'Iqbal Roudatul',
         description: 'Bot WhatsApp serba guna.'
     },
-    environment: {
-        current: process.env.NODE_ENV || 'production', // 'production' or 'development'
-        productionSession: 'prod_auth_info_baileys',
-        developmentSession: 'dev_auth_info_baileys',
-        autoSwitchToDev: true, // new setting to control auto-switching behavior
-        devModeMessage: "🔧 *Bot sedang dalam mode Development*\n\nMohon maaf, saat ini bot sedang dalam pengembangan.\nSilakan gunakan bot production untuk layanan normal.\n\nTerimakasih atas pengertiannya! 🙏",
-        sessionSwitching: {
-            enabled: true,
-            deactivationSuffix: '_inactive',
-            switchDelay: 5000 // delay in ms before switching sessions
-        }
-    },
     session: {
-        get path() {
-            return process.env.NODE_ENV === 'development' ? 
-                'dev_auth_info_baileys' : 
-                'prod_auth_info_baileys';
-        }
+        path: 'auth_info_baileys',
+        maxSessions: 1 // Limit to single session to prevent conflicts
     },
     gemini: {
         apiKey: 'AIzaSyCTiweyGV7t7pVeJ1aQAkzUucm2AiB-xLs',
@@ -33,8 +18,8 @@ module.exports = {
     },
     maintenance: {
         enabled: false,
-        forceMaintenanceOnDualLogin: true, // New setting
-        message: "🛠️ *Bot sedang dalam maintenance*\n\nMohon maaf, bot sedang dalam perbaikan/update.\nSilakan coba beberapa saat lagi.\n\nTerimakasih atas pengertiannya! 🙏"
+        message: 'Maaf, bot sedang dalam maintenance. Silakan coba beberapa saat lagi.',
+        allowedUsers: ['6281291544061@s.whatsapp.net'] // Same as owner by default
     },
     commands: {
         start: ['hi', 'halo', 'mulai'],
