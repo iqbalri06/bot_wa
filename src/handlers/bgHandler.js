@@ -9,6 +9,7 @@ const path = require('path');
 const BASE_PATH = path.resolve(__dirname, '../../node_modules/@imgly/background-removal-node');
 const DIST_PATH = path.join(BASE_PATH, 'dist');
 const RESOURCE_PATH = path.join(BASE_PATH, 'dist', 'resources.json');
+const TEMP_DIR = path.resolve(__dirname, '../../temp'); // Add this line
 
 async function convertToValidImage(buffer) {
     try {
@@ -38,6 +39,9 @@ async function handleRemoveBackground(sock, senderId, messageType, message) {
             return;
         }
 
+        // Ensure temp directory exists
+        await mkdir(TEMP_DIR, { recursive: true });
+
         await sock.sendMessage(senderId, { text: '⏳ Processing your image...' });
 
         try {
@@ -49,12 +53,10 @@ async function handleRemoveBackground(sock, senderId, messageType, message) {
             // Convert image first
             const validBuffer = await convertToValidImage(buffer);
             
-            // Create temporary input file
-            const inputFile = `./temp/${uuidv4()}_input.jpg`;
+            // Use absolute paths for temp files
+            const inputFile = path.join(TEMP_DIR, `${uuidv4()}_input.jpg`);
             await writeFile(inputFile, validBuffer);
             tempFiles.push(inputFile);
-
-            await mkdir('./temp', { recursive: true });
 
             // Updated configuration with correct paths
             const config = {
@@ -86,7 +88,7 @@ async function handleRemoveBackground(sock, senderId, messageType, message) {
             const blob = await removeBackground(inputFile, config);
             
             // Save blob to file
-            const outputFile = `./temp/${uuidv4()}.png`;
+            const outputFile = path.join(TEMP_DIR, `${uuidv4()}.png`);
             tempFiles.push(outputFile);
             await writeFile(outputFile, Buffer.from(await blob.arrayBuffer()));
 

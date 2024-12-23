@@ -1,4 +1,3 @@
-
 const commands = require('./commandRegistry');
 
 class CommandHandler {
@@ -8,7 +7,12 @@ class CommandHandler {
 
         const handler = commands[command.name];
         if (handler) {
-            await handler(sock, senderId, command.params, messageType, message);
+            // Special handling for sticker commands
+            if (command.name === 'sticker' || command.name === 's') {
+                await handler(sock, message, senderId);
+            } else {
+                await handler(sock, senderId, command.params, messageType, message);
+            }
         }
     }
 
