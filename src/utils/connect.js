@@ -12,6 +12,11 @@ try {
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// Add global handler for unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 async function connectToWhatsApp(retryCount = 0) {
     try {
         const { state, saveCreds } = await useMultiFileAuthState(config.session.path);
@@ -93,7 +98,7 @@ async function connectToWhatsApp(retryCount = 0) {
         // Handle errors globally
         sock.ev.on('error', async (error) => {
             console.error('Connection error:', error);
-            await connectToWhatsApp(); // Attempt to reconnect
+            connectToWhatsApp().catch(err => logger.error('Error reconnecting:', err));
         });
 
         // Update message handling
@@ -105,8 +110,9 @@ async function connectToWhatsApp(retryCount = 0) {
                 if (!message) return;
 
                 // Check maintenance mode
+                const isGroup = message.key.remoteJid.endsWith('@g.us');
+                const sender = isGroup ? message.key.participant : message.key.remoteJid;
                 if (isMaintenanceMode) {
-                    const sender = message.key.remoteJid;
                     if (!config.maintenance.allowedUsers.includes(sender)) {
                         await sock.sendMessage(sender, { 
                             text: config.maintenance.message 

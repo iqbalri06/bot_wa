@@ -19,7 +19,7 @@ module.exports = {
     maintenance: {
         enabled: false,
         message: 'Maaf, bot sedang dalam maintenance. Silakan coba beberapa saat lagi.',
-        allowedUsers: ['6281291544061@s.whatsapp.net'] // Same as owner by default
+        allowedUsers: ['62812915@s.whatsapp.net'] // Same as owner by default
     },
     commands: {
         start: ['hi', 'halo', 'mulai'],
