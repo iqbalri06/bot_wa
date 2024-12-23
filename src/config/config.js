@@ -8,8 +8,16 @@ module.exports = {
         author: 'Iqbal Roudatul',
         description: 'Bot WhatsApp serba guna.'
     },
+    environment: {
+        current: process.env.NODE_ENV || 'production', // 'production' or 'development'
+        productionSession: 'prod_auth_info_baileys',
+        developmentSession: 'dev_auth_info_baileys'
+    },
     session: {
-        path: 'auth_info_baileys'
+        // Dynamic session path based on environment
+        path: process.env.NODE_ENV === 'development' ? 
+            'dev_auth_info_baileys' : 
+            'prod_auth_info_baileys'
     },
     gemini: {
         apiKey: 'AIzaSyCTiweyGV7t7pVeJ1aQAkzUucm2AiB-xLs',
@@ -17,6 +25,7 @@ module.exports = {
     },
     maintenance: {
         enabled: false,
+        forceMaintenanceOnDualLogin: true, // New setting
         message: "🛠️ *Bot sedang dalam maintenance*\n\nMohon maaf, bot sedang dalam perbaikan/update.\nSilakan coba beberapa saat lagi.\n\nTerimakasih atas pengertiannya! 🙏"
     },
     commands: {

@@ -27,6 +27,19 @@ async function cleanupSession(sessionPath) {
 
 async function connectToWhatsApp(retryCount = 0) {
     try {
+        // Check if other instance is running by trying to read the other environment's auth file
+        const fs = require('fs');
+        const otherEnvPath = process.env.NODE_ENV === 'development' ? 
+            config.environment.productionSession :
+            config.environment.developmentSession;
+
+        const isOtherInstanceActive = fs.existsSync(otherEnvPath);
+        
+        if (isOtherInstanceActive && config.maintenance.forceMaintenanceOnDualLogin) {
+            config.maintenance.enabled = true;
+            console.log('Other instance detected - enabling maintenance mode');
+        }
+
         const { state, saveCreds } = await useMultiFileAuthState(config.session.path);
         
         const sock = makeWASocket({
@@ -74,6 +87,8 @@ async function connectToWhatsApp(retryCount = 0) {
         sock.ev.on('connection.update', async (update) => {
             const { connection, lastDisconnect, qr } = update;
             
+            const envPrefix = process.env.NODE_ENV === 'development' ? '[DEV] ' : '[PROD] ';
+            
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
                 const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
@@ -98,9 +113,11 @@ async function connectToWhatsApp(retryCount = 0) {
                     process.exit(1);
                 }
             } else if (connection === 'connecting') {
-                console.log('Connecting to WhatsApp...' + (config.maintenance.enabled ? ' (MAINTENANCE MODE)' : ''));
+                console.log(envPrefix + 'Connecting to WhatsApp...' + 
+                    (config.maintenance.enabled ? ' (MAINTENANCE MODE)' : ''));
             } else if (connection === 'open') {
-                console.log('Connected successfully!' + (config.maintenance.enabled ? ' (MAINTENANCE MODE)' : ''));
+                console.log(envPrefix + 'Connected successfully!' + 
+                    (config.maintenance.enabled ? ' (MAINTENANCE MODE)' : ''));
             }
             
             // Save credentials whenever updated
