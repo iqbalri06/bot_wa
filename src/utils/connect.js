@@ -12,6 +12,19 @@ try {
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// Add cleanup function
+async function cleanupSession(sessionPath) {
+    try {
+        const fs = require('fs');
+        if (fs.existsSync(sessionPath)) {
+            fs.rmSync(sessionPath, { recursive: true, force: true });
+            console.log('Session cleaned up due to conflict');
+        }
+    } catch (err) {
+        console.error('Session cleanup failed:', err);
+    }
+}
+
 async function connectToWhatsApp(retryCount = 0) {
     try {
         const { state, saveCreds } = await useMultiFileAuthState(config.session.path);
@@ -19,20 +32,28 @@ async function connectToWhatsApp(retryCount = 0) {
         const sock = makeWASocket({
             printQRInTerminal: true,
             syncFullHistory: false,
-            markOnlineOnConnect: true, // Changed to true to show online status
-            connectTimeoutMs: 60000,
-            retryRequestDelayMs: 1000, // Reduced delay for faster reconnection
-            auth: state,
-            browser: [config.botInfo.name, 'Chrome', config.botInfo.version],
-            defaultQueryTimeoutMs: 60000, // Add timeout for queries
-            keepAliveIntervalMs: 10000, // Add keep-alive interval
+            markOnlineOnConnect: false, // Changed to false to prevent conflicts
+            connectTimeoutMs: 30000, // Reduced timeout
             auth: {
                 creds: state.creds,
                 keys: makeCacheableSignalKeyStore(state.keys, logger)
             },
-            // Add message retries
+            browser: [config.botInfo.name, 'Chrome', config.botInfo.version],
+            defaultQueryTimeoutMs: 30000, // Reduced timeout
+            keepAliveIntervalMs: 15000, // Increased interval
+            retryRequestDelayMs: 2000, // Increased delay
             msgRetryCounterMap: {},
-            generateHighQualityLinkPreview: true
+            generateHighQualityLinkPreview: false, // Set to false to reduce load
+            // Add these options for better stream handling
+            patchMessageBeforeSending: msg => {
+                const requiresPatch = !!(
+                    msg.buttonsMessage || msg.templateMessage || msg.listMessage
+                );
+                if (requiresPatch) {
+                    msg = { viewOnceMessage: { message: { messageContextInfo: { deviceListMetadataVersion: 2 }, ...msg } } };
+                }
+                return msg;
+            }
         });
 
         // Add custom message processing
@@ -54,11 +75,27 @@ async function connectToWhatsApp(retryCount = 0) {
             const { connection, lastDisconnect, qr } = update;
             
             if (connection === 'close') {
-                const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-                console.log('Connection closed due to:', lastDisconnect?.error, '\nReconnecting:', shouldReconnect);
+                const statusCode = lastDisconnect?.error?.output?.statusCode;
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+                
+                console.log('Connection closed due to:', lastDisconnect?.error);
+
+                // Handle stream error specifically
+                if (statusCode === 440) {
+                    console.log('Stream conflict detected, cleaning up session...');
+                    await cleanupSession(config.session.path);
+                    await delay(5000); // Wait 5 seconds before reconnecting
+                    return connectToWhatsApp(0); // Reset retry count after cleanup
+                }
                 
                 if (shouldReconnect) {
-                    connectToWhatsApp(); // Recursive reconnection
+                    // Add exponential backoff
+                    const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+                    console.log(`Reconnecting in ${backoffDelay/1000} seconds...`);
+                    setTimeout(() => connectToWhatsApp(retryCount + 1), backoffDelay);
+                } else {
+                    console.log('Connection closed permanently');
+                    process.exit(1);
                 }
             } else if (connection === 'connecting') {
                 console.log('Connecting to WhatsApp...');
@@ -83,6 +120,15 @@ async function connectToWhatsApp(retryCount = 0) {
             await connectToWhatsApp(); // Attempt to reconnect
         });
 
+        // Enhanced error handling
+        sock.ws.on('error', async (err) => {
+            console.error('WebSocket Error:', err);
+            if (err.message.includes('Stream Errored')) {
+                await cleanupSession(config.session.path);
+                process.exit(1); // Force restart to clean up everything
+            }
+        });
+
         // Update message handling
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
             if (type !== 'notify') return;
@@ -98,9 +144,28 @@ async function connectToWhatsApp(retryCount = 0) {
             }
         });
 
+        // Add connection cleanup on process exit
+        process.on('SIGINT', async () => {
+            console.log('Closing connection...');
+            if (sock) {
+                try {
+                    await sock.end();
+                    await sock.logout();
+                } catch (err) {
+                    console.error('Error during cleanup:', err);
+                }
+            }
+            process.exit(0);
+        });
+
         return sock;
     } catch (error) {
         logger.error('Failed to connect:', error);
+        if (error.message.includes('Stream Errored')) {
+            await cleanupSession(config.session.path);
+            await delay(5000);
+            return connectToWhatsApp(0);
+        }
         const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
         setTimeout(() => connectToWhatsApp(retryCount + 1), backoffDelay);
     }

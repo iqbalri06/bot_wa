@@ -4,6 +4,7 @@ const { writeFile, unlink, mkdir } = require('fs/promises');
 const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
 const path = require('path');
+const { fileURLToPath } = require('url');
 
 // Update path configuration using Node's path resolution
 const BASE_PATH = path.resolve(__dirname, '../../node_modules/@imgly/background-removal-node');
@@ -13,11 +14,18 @@ const TEMP_DIR = path.resolve(__dirname, '../../temp'); // Add this line
 
 async function convertToValidImage(buffer) {
     try {
-        // Convert to raw RGB/RGBA format
+        // Resize image if too large (max dimension 1500px)
         const image = await sharp(buffer)
+            .resize(1500, 1500, {
+                fit: 'inside',
+                withoutEnlargement: true
+            })
             .toColorspace('srgb')
             .removeAlpha()
-            .jpeg({ quality: 100 })
+            .jpeg({ 
+                quality: 80,  // Reduce quality to save memory
+                mozjpeg: true // Better compression
+            })
             .toBuffer();
 
         // Verify the image was converted successfully
@@ -58,11 +66,14 @@ async function handleRemoveBackground(sock, senderId, messageType, message) {
             await writeFile(inputFile, validBuffer);
             tempFiles.push(inputFile);
 
-            // Updated configuration with correct paths
+            // Convert Windows path to file URL format
+            const inputFileURL = `file://${inputFile.replace(/\\/g, '/')}`;
+
+            // Updated configuration with correct model value
             const config = {
                 debug: true,
                 proxyToWorker: false,
-                model: 'medium',
+                model: 'small', // Changed from 'fast' to 'small' for faster processing
                 output: {
                     format: 'image/png',
                     quality: 0.8
@@ -84,8 +95,8 @@ async function handleRemoveBackground(sock, senderId, messageType, message) {
                 throw new Error('Background removal resources not found. Please reinstall @imgly/background-removal-node');
             }
 
-            // Process the image using the file path instead of buffer
-            const blob = await removeBackground(inputFile, config);
+            // Process the image using file URL instead of file path
+            const blob = await removeBackground(inputFileURL, config);
             
             // Save blob to file
             const outputFile = path.join(TEMP_DIR, `${uuidv4()}.png`);
@@ -99,9 +110,12 @@ async function handleRemoveBackground(sock, senderId, messageType, message) {
 
         } catch (error) {
             console.error('Processing error details:', error);
-            await sock.sendMessage(senderId, { 
-                text: `❌ Failed to process image: ${error.message}` 
-            });
+            const errorMessage = error.issues 
+                ? `❌ Configuration error: ${error.issues[0].message}`
+                : `❌ Failed to process image: ${error.message.includes('Unsupported protocol') 
+                    ? 'Internal path error, please try again' 
+                    : error.message}`;
+            await sock.sendMessage(senderId, { text: errorMessage });
         }
     } catch (error) {
         console.error('Background removal error:', error);
