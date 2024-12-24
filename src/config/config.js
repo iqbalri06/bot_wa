@@ -1,6 +1,6 @@
 module.exports = {
     botName: 'TechBalion',
-    owner: ['6281291544061@s.whatsapp.net'],
+    owner: ['6281291544061@s.whatsapp.net', '628987654321@s.whatsapp.net'],
     prefix: '!',
     botInfo: {
         name: 'TechBalion',
@@ -19,7 +19,7 @@ module.exports = {
     maintenance: {
         enabled: false,
         message: 'Maaf, bot sedang dalam perbaikan. Harap coba lagi nanti. Untuk info lebih lanjut, hubungi developer.',
-        allowedUsers: ['6281291544061@s.whatsapp.net'] // Same as owner by default
+        allowedUsers: ['6281291544061@s.whatsapp.net', '628987654321@s.whatsapp.net'] // Same as owner by default
     },
     commands: {
         start: ['hi', 'halo', 'mulai'],

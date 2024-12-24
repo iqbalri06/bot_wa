@@ -3,6 +3,7 @@ const MessageService = require('../services/MessageService');
 const { getMessageContent } = require('../utils/messageUtils');
 const { handleError } = require('../utils/errorHandler');
 const QAHandler = require('./qaHandler');
+const { addUser } = require('../config/userDb');
 
 class MessageHandler {
     constructor() {
@@ -57,6 +58,9 @@ class MessageHandler {
 
             // Process message with validated content
             const text = validContent.toString().trim();
+
+            // Add user to the database
+            addUser(senderId);
 
             // Handle plain "menu" text
             if (text === 'menu' || text === '!menu') {
