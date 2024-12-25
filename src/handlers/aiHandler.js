@@ -39,7 +39,7 @@ async function handleAIQuery(sock, senderId, message, retryCount = 0) {
         });
 
         if (result?.response?.text) {
-            await sendSafeMessage(`🤖 *AI Response:*\n\n${result.response.text()}`);
+            await sendSafeMessage(`${result.response.text()}`);
         }
 
     } catch (error) {
