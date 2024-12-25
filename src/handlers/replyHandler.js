@@ -5,6 +5,23 @@ const { chatData } = require('./sendHandler');
 
 async function handleReply(sock, message, senderId) {
     try {
+        // Send processing reaction
+        const sendReaction = async (emoji) => {
+            try {
+                await sock.sendMessage(message.key.remoteJid, {
+                    react: {
+                        text: emoji,
+                        key: message.key
+                    }
+                });
+            } catch (err) {
+                console.error('Reaction error:', err);
+            }
+        };
+
+        // Add initial processing reaction
+        await sendReaction('⏳');
+
         console.log('Processing reply with message:', JSON.stringify(message, null, 2));
         
         if (!message || !message.message) {
@@ -25,11 +42,12 @@ async function handleReply(sock, message, senderId) {
             throw new Error('Invalid quoted message');
         }
 
-        // Get chat info from stored data
+        // Validate this is an anonymous chat reply
         const chatInfo = chatData.get(quotedMessageId);
         if (!chatInfo) {
-            console.log('Chat info not found for ID:', quotedMessageId);
-            return;
+            await sendReaction('❌');
+            console.log('Not an anonymous chat reply, ID:', quotedMessageId);
+            return; // Exit without processing AI
         }
 
         const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false });
@@ -156,7 +174,7 @@ async function handleReply(sock, message, senderId) {
                 });
             }
 
-            // Store chat data
+            // Store chat data and update reaction
             if (sent?.key?.id) {
                 chatData.set(sent.key.id, {
                     sender: senderId,
@@ -165,22 +183,37 @@ async function handleReply(sock, message, senderId) {
                     timestamp: timestamp,
                     originalMessageId: quotedMessageId
                 });
+                
+                // Only use reaction for confirmation, remove text message
+                await sendReaction('✅');
             }
 
-            // Confirm message sent
-            await sock.sendMessage(senderId, { 
-                text: '✅ *Pesan berhasil diteruskan*\n\n_Terimakasih telah menggunakan bot ini_' 
-            });
-
         } catch (err) {
-            console.error('Error handling reply:', err);
-            await sock.sendMessage(senderId, { text: responses.reply_failed });
+            // Remove processing reaction
+            await sendReaction('');
+            
+            // Send detailed error message
+            const errorDetails = err.message || 'Unknown error';
+            const errorType = err.code || err.name || 'Error';
+            await sock.sendMessage(senderId, { 
+                text: `❌ *Gagal meneruskan pesan*\n\n` +
+                      `*Tipe*: ${errorType}\n` +
+                      `*Detail*: ${errorDetails}\n\n` +
+                      `_Silakan coba lagi dalam beberapa saat_`
+            });
+            console.error('Reply error details:', { errorType, errorDetails });
         }
 
     } catch (err) {
+        // Remove processing reaction
+        await sendReaction('');
+        
+        // Send general error message
         console.error('Reply handler error:', err);
         await sock.sendMessage(senderId, { 
-            text: `${responses.reply_failed}\n\nError: ${err.message}` 
+            text: `❌ *Sistem Error*\n\n` +
+                  `*Detail*: ${err.message}\n\n` +
+                  `_Mohon maaf, silakan coba lagi nanti_`
         });
     }
 }

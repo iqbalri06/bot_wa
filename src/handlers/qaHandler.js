@@ -29,46 +29,29 @@ class QAHandler {
   }
 
   // Updated findAnswer method
-  async findAnswer(text, sock, senderId) {
+  async findAnswer(text, sock, senderId, messageInfo) {
     try {
-      // Strict input validation
-      if (!text || typeof text !== 'string') {
-        console.log('Invalid input type:', typeof text);
+      // Check if message is a reply first
+      const isReply = messageInfo.rawMessage && 
+          (messageInfo.rawMessage.extendedTextMessage?.contextInfo?.stanzaId ||
+           Object.values(messageInfo.rawMessage).some(msg => msg?.contextInfo?.stanzaId));
+
+      if (isReply) {
+        console.log('QA: Skipping reply message');
         return null;
       }
 
-      const normalizedInput = String(text).toLowerCase().trim();
-      if (!normalizedInput) {
+      // Validate message info structure
+      if (!messageInfo?.key?.remoteJid || !messageInfo?.key?.id) {
+        console.error('QA Handler: Invalid message info structure:', messageInfo);
         return null;
       }
 
-      // Remove special characters and extra spaces
-      const cleanInput = normalizedInput
-        .replace(/[^\w\s]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      if (!cleanInput) {
-        return null;
-      }
-
-      const match = this.qaData.find(qa => {
-        const cleanQuestion = qa.question.toLowerCase()
-          .replace(/[?!.,]/g, '')
-          .trim();
-        return cleanInput.includes(cleanQuestion) || 
-               cleanQuestion.includes(cleanInput);
-      });
-
+      // Use message info for AI query if no QA match found
+      const match = this.findQAMatch(text);
       if (!match) {
-        // Fix: Pass parameters in correct order
-        try {
-          await handleAIQuery(sock, senderId, text);
-          return null;
-        } catch (error) {
-          console.error('AI Error:', error);
-          return 'Maaf, terjadi kesalahan dalam memproses pertanyaan Anda.';
-        }
+        await handleAIQuery(sock, senderId, text, 0, messageInfo.key);
+        return null;
       }
 
       return match.answer;
@@ -76,6 +59,37 @@ class QAHandler {
       console.error('QA Handler Error:', error);
       return null;
     }
+  }
+
+  findQAMatch(text) {
+    // Strict input validation
+    if (!text || typeof text !== 'string') {
+      console.log('Invalid input type:', typeof text);
+      return null;
+    }
+
+    const normalizedInput = String(text).toLowerCase().trim();
+    if (!normalizedInput) {
+      return null;
+    }
+
+    // Remove special characters and extra spaces
+    const cleanInput = normalizedInput
+      .replace(/[^\w\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!cleanInput) {
+      return null;
+    }
+
+    return this.qaData.find(qa => {
+      const cleanQuestion = qa.question.toLowerCase()
+        .replace(/[?!.,]/g, '')
+        .trim();
+      return cleanInput.includes(cleanQuestion) || 
+             cleanQuestion.includes(cleanInput);
+    });
   }
 
   // Get all QA pairs

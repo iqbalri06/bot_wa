@@ -9,30 +9,34 @@ class MessageService {
         this.qaHandler.loadQAFromCSV('qa_database.csv');
     }
 
-    async processMessage(sock, senderId, messageType, text, message) {
+    async processMessage(sock, senderId, messageType, text, standardizedMessage) {
         try {
-            if (!sock?.sendMessage || !senderId) {
-                console.error('Invalid sock or senderId');
+            // Initial validation
+            if (!standardizedMessage?.messageInfo) {
+                console.error('Invalid message info:', standardizedMessage);
                 return;
             }
 
-            // Improved quoted message handling
-            const quotedMsg = getQuotedMessage(message);
-            if (quotedMsg) {
-                console.log('Processing reply message...');
-                await handleReply(sock, message, senderId);
+            const { messageInfo } = standardizedMessage;
+            console.log('Processing message:', { type: messageType, hasReply: !!messageInfo.rawMessage });
+
+            // Check if message is a reply by looking for contextInfo
+            const isReply = messageInfo.rawMessage && 
+                (messageInfo.rawMessage.extendedTextMessage?.contextInfo?.stanzaId ||
+                 Object.values(messageInfo.rawMessage).some(msg => msg?.contextInfo?.stanzaId));
+
+            if (isReply) {
+                console.log('Handling reply message...');
+                await handleReply(sock, {
+                    key: messageInfo.key,
+                    message: messageInfo.rawMessage
+                }, senderId);
                 return;
             }
 
-            // Handle game inputs
-            const gameInput = String(text || '').toLowerCase().trim();
-            if (['batu', 'gunting', 'kertas'].includes(gameInput)) {
-                await handleRPSGame(sock, senderId, gameInput);
-                return;
-            }
-
-            // Handle QA with AI fallback
-            const answer = await this.qaHandler.findAnswer(text, sock, senderId);
+            // Only proceed to QA/AI if not a reply
+            console.log('No reply found, proceeding to QA/AI...');
+            const answer = await this.qaHandler.findAnswer(text, sock, senderId, messageInfo);
             if (answer) {
                 await sock.sendMessage(senderId, {
                     text: answer,
@@ -41,7 +45,11 @@ class MessageService {
             }
 
         } catch (error) {
-            console.error('Process message error:', error);
+            console.error('Process message error:', {
+                error,
+                messageType,
+                messageInfo: standardizedMessage?.messageInfo
+            });
             throw error;
         }
     }

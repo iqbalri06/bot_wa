@@ -30,6 +30,17 @@ class MessageHandler {
 
     async handle(sock, message) {
         try {
+            // Enhance message key validation
+            if (!message?.key || !message.key?.remoteJid || !message.key?.id) {
+                console.error('Invalid message or message key:', {
+                    hasMessage: !!message,
+                    hasKey: !!message?.key,
+                    remoteJid: message?.key?.remoteJid,
+                    messageId: message?.key?.id
+                });
+                return;
+            }
+
             // Strengthen validation
             if (!sock?.sendMessage || !message?.key?.remoteJid) {
                 console.error('Invalid message/socket:', {
@@ -40,6 +51,13 @@ class MessageHandler {
             }
 
             const { messageType, content } = getMessageContent(message) || {};
+            
+            // Add type validation
+            if (!messageType) {
+                console.log('Invalid message type:', { message });
+                return;
+            }
+
             const senderId = message.key.remoteJid;
 
             // Enhanced content validation
@@ -62,8 +80,9 @@ class MessageHandler {
             // Add user to the database
             addUser(senderId);
 
-            // Handle plain "menu" text
-            if (text === 'menu' || text === '!menu') {
+            // Handle menu text case-insensitively
+            const lowerText = text.toLowerCase();
+            if (lowerText === 'menu' || lowerText === '!menu') {
                 const { getMainMenu } = require('../menus/mainMenu');
                 const menu = await getMainMenu();
                 await sock.sendMessage(senderId, { text: menu.text });
@@ -76,14 +95,39 @@ class MessageHandler {
                 return;
             }
 
-            // Handle other commands
+            // Handle other commands with validated message key
             if (text.startsWith('!')) {
-                await this.commandHandler.executeCommand(sock, senderId, messageType, text, message);
+                await this.commandHandler.executeCommand(sock, senderId, messageType, text, message.key);
                 return;
             }
 
-            // Remove QA handling here and only process through MessageService
-            await this.messageService.processMessage(sock, senderId, messageType, text, message);
+            // Process message with validated message object
+            if (!text.startsWith('!')) {
+                // Create standardized message structure
+                const standardizedMessage = {
+                    messageInfo: {
+                        key: {
+                            remoteJid: message.key.remoteJid,
+                            fromMe: message.key.fromMe || false,
+                            id: message.key.id,
+                            participant: message.key.participant
+                        },
+                        type: messageType,
+                        content: text,
+                        rawMessage: message.message
+                    }
+                };
+
+                console.log('Standardized message:', JSON.stringify(standardizedMessage, null, 2));
+                
+                await this.messageService.processMessage(
+                    sock, 
+                    senderId, 
+                    messageType, 
+                    text, 
+                    standardizedMessage
+                );
+            }
 
         } catch (error) {
             console.error('Message handling error:', error);

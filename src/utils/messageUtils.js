@@ -31,18 +31,30 @@ function getMessageContent(message) {
 }
 
 // Add new helper function
-function getQuotedMessage(message) {
-    const messageType = Object.keys(message.message)[0];
-    const msg = message.message[messageType];
-    
-    if (msg?.contextInfo?.quotedMessage) {
-        return {
-            quoted: msg.contextInfo.quotedMessage,
-            stanzaId: msg.contextInfo.stanzaId
-        };
+const getQuotedMessage = (message) => {
+    try {
+        // Add null check for message
+        if (!message?.message) {
+            return null;
+        }
+
+        // Safely get message keys
+        const messageTypes = Object.keys(message.message || {});
+        if (!messageTypes.length) {
+            return null;
+        }
+
+        // Get quoted message safely
+        const quotedMessage = messageTypes
+            .map(type => message.message[type]?.contextInfo?.quotedMessage)
+            .find(quoted => quoted != null);
+
+        return quotedMessage || null;
+    } catch (error) {
+        console.error('Error getting quoted message:', error);
+        return null;
     }
-    return null;
-}
+};
 
 module.exports = {
     getMessageContent,

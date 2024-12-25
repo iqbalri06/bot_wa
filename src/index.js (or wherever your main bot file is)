@@ -1,0 +1,20 @@
+
+const { handleAIQuery } = require('./handlers/aiHandler');
+
+// ...existing code...
+
+// Add this where you have access to the sock object
+sock.ev.on('messages.upsert', async ({ messages }) => {
+    const msg = messages[0];
+    
+    // Assuming you have some trigger to detect AI commands
+    if (isAICommand(msg)) {  // your existing AI detection logic
+        await handleAIQuery(
+            sock,
+            msg.key.remoteJid,
+            msg.message.conversation || msg.message.extendedTextMessage?.text,
+            0,  // retryCount
+            msg.key  // Pass the full message key for reaction
+        );
+    }
+});
