@@ -85,7 +85,7 @@ class MessageHandler {
             if (lowerText === 'menu' || lowerText === '!menu') {
                 const { getMainMenu } = require('../menus/mainMenu');
                 const menu = await getMainMenu();
-                await sock.sendMessage(senderId, { text: menu.text });
+                await sock.sendMessage(senderId, menu, { quoted: message });
                 return;
             }
 
@@ -97,7 +97,14 @@ class MessageHandler {
 
             // Handle other commands with validated message key
             if (text.startsWith('!')) {
-                await this.commandHandler.executeCommand(sock, senderId, messageType, text, message.key);
+                // Pass full message object
+                await this.commandHandler.executeCommand(
+                    sock, 
+                    senderId, 
+                    messageType, 
+                    text, 
+                    message  // Pass complete message object
+                );
                 return;
             }
 
@@ -161,7 +168,7 @@ class MessageHandler {
         try {
             switch (selection) {
                 case 1: // AI Assistant
-                    await this.sendResponse(sock, senderId, { text: require('../menus/instagramMenu') });
+                    await this.sendResponse(sock, senderId, { text: require('../menus/aiMenu') });
                     break;
                 case 2: // Anonymous Message
                     await this.sendResponse(sock, senderId, { text: require('../menus/anonymousMenu') });

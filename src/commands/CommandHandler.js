@@ -7,9 +7,14 @@ class CommandHandler {
 
         const handler = commands[command.name];
         if (handler) {
-            // Special handling for sticker commands
+            // Pass full message object for sticker command
             if (command.name === 'sticker' || command.name === 's') {
-                await handler(sock, message, senderId);
+                console.log('Sticker command detected, passing message:', {
+                    hasMessage: !!message,
+                    messageType,
+                    command: command.name
+                });
+                await handler(sock, message, senderId, messageType);
             } else {
                 await handler(sock, senderId, command.params, messageType, message);
             }
