@@ -13,8 +13,8 @@ module.exports = {
         maxSessions: 1 // Limit to single session to prevent conflicts
     },
     gemini: {
-        apiKey: 'AIzaSyCTiweyGV7t7pVeJ1aQAkzUucm2AiB-xLs',
-        model: 'gemini-1.5-flash'
+        apiKey: 'AIzaSyAHoDgE_kChH9E86WIvtG_yMkWAuFT3qFU',
+        model: 'gemini-2.0-flash-exp'
     },
     maintenance: {
         enabled: false,
